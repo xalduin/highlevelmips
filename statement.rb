@@ -66,7 +66,7 @@ B_ELSE_DECL = /else/
 B_ENDIF = /endif/
 
 B_LOOP_DECL = /^\s*loop\s*$/
-B_ENDLOOP = /^\s*endloop\s$/
+B_ENDLOOP = /^\s*endloop\s*$/
 
 # Matchinf for exitwhen statement
 # 1. Expression to be evaluated

@@ -57,7 +57,7 @@ end
 # 1. left hand side
 # 2. operator
 # 3. right hand side
-EXP_REGEXP = /^([a-zA-Z]\w*)\s*(\S{1,2})\s*([a-zA-Z]\w*)$/
+EXP_REGEXP = /((?:[a-zA-Z]\w*)|(?:\d+))\s*(\S{1,2})\s*((?:[a-zA-Z]\w*)|(?:\d+))/
 
 CONST_REGEXP = /^\d+$/
 
@@ -149,6 +149,9 @@ def process_expression(text)
     right_constant = result[:right][0] == :const
 
     if left_constant and right_constant
+        left = result[:left][1]
+        right = result[:right][1]
+
         result = evaluate_const(left, operator, right)
 
         if result == nil
@@ -192,6 +195,8 @@ def process_condition(text)
     right_constant = result[:right][0] == :const
 
     if left_constant and right_constant
+        left = result[:left][1]
+        right = result[:right][1]
         result = evaluate_const(left, operator, right)
 
         if result == nil

@@ -1,4 +1,4 @@
-require 'expression.rb'
+load 'expression.rb'
 
 # String * MatchData * {} * {} -> true/nil
 # Process a loop declaration
@@ -17,14 +17,21 @@ def process_loop(line, match, global_table, local_table)
         return nil
     end
 
+    if local_table[:loop_index] == nil
+        local_table[:loop_index] = 0
+    end
+    if local_table[:loop_stack] == nil
+        local_table[:loop_stack] = []
+    end 
+
 
     loop_index = local_table[:loop_index]
     loop_stack = local_table[:loop_stack]
 
-    if loop_index == nil or loop_stack == nil
-        puts "Null loop stack?"
-        return nil
-    end
+   # if loop_index == nil or loop_stack == nil
+   #     puts "Null loop stack?"
+   #     return nil
+   # end
 
     loop_index += 1
     loop_stack << loop_index
@@ -73,6 +80,10 @@ end
 # true on success, nil on failure
 #
 # Adds an additional instruction on success
+# Instruction format:
+# :type => exitwhen
+# :index => loop index
+# :value => value
 def process_exitwhen(line, match, global_table, local_table)
     unless global_table and local_table
         puts "exitwhen must be used inside a function"

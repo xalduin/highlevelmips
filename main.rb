@@ -1,5 +1,7 @@
-require 'statement.rb'
-require 'variable.rb'
+load 'statement.rb'
+load 'variable.rb'
+load 'func.rb'
+load 'loop.rb'
 
 LOCAL_COUNT = 8
 
@@ -22,17 +24,22 @@ def process_line(line, table)
 
     match = line.match(S_VAR_DECL)
     if match
-        process_var(line, match, table)
+        return process_var(line, match, table, local_table)
     end
 
     match = line.match(S_CONST_DECL)
     if match
-        process_const_decl(line, match, table)
+        return process_const_decl(line, match, table, local_table)
     end
 
     match = line.match(B_FUNC_DECL)
     if match
-        process_func(line, match, table)
+        return process_func_decl(line, match, table)
+    end
+
+    match = line.match(B_ENDFUNC)
+    if match
+        return process_endfunc(line, match, table)
     end
 
     match = line.match(B_IF_DECL)
@@ -55,16 +62,36 @@ def process_line(line, table)
         return process_endloop(line, match, table, local_table)
     end
 
+    if line.match(/^\s*$/)
+        return true
+    end
+
+    puts "Unrecognized expression"
+    return nil
 end
     
+def run_program()
+    text = File.open("input.hlm").read
+    text.gsub!(/\r\n?/, "\n")
 
-text = File.open("input.hlm").read
-text.gsub!(/\r\n?/, "\n")
+    table = {}
 
-table = {}
+    line_number = 1
+    text.each_line do |line|
+        result = process_line(line, table)
+        
+        if result == nil
+            puts "Line #{line_number}: #{line}\n"
+            puts "Failed to parse file"
+            break
+        end
 
-line_number = 1
-text.each_line do |line|
-    process_line(line, table)
-    line_number += 1
+        line_number += 1
+    end
+    puts "Finished"
+
+    return table
 end
+
+#run_program
+#puts "Finished"

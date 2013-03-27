@@ -1,4 +1,4 @@
-require 'statement.rb'
+load 'statement.rb'
 
 FUNC_ARGS_REGEXP = /([a-zA-Z]\w*)\s*:\s*([a-zA-Z]+)/
 
@@ -10,6 +10,10 @@ FUNC_ARGS_REGEXP = /([a-zA-Z]\w*)\s*:\s*([a-zA-Z]+)/
 # [{:name => String, :type => String}]
 
 def process_args(args, arg_list)
+    if args == nil || args.empty?
+        return true
+    end
+
     unless arg_list.empty?
         puts "Arg list must be empty!"
         return nil
@@ -19,15 +23,15 @@ def process_args(args, arg_list)
     arg_defs = args.scan(FUNC_ARGS_REGEXP)
 
     arg_defs.each do |arg_match|
-        name = arg_match[1]
-        type = arg_match[2]
+        name = arg_match[0]
+        type = arg_match[1]
 
         unless valid_type?(type)
             puts "Invalid argument type '#{type}'"
             return nil
         end
 
-        arg_list.add({:name => name, :type => type})
+        arg_list<< {:name => name, :type => type}
     end
 
     return true
@@ -54,6 +58,16 @@ def process_func_decl(line, match, global_table)
     if global_table[:current_func] != nil
         puts "Unable to nest function declarations"
         return nil
+    end
+
+    if global_table[:func] == nil
+        global_table[:func] = {}
+    end
+    if global_table[:func_type] == nil
+        global_table[:func_type] = {}
+    end
+    if global_table[:func_args] == nil
+        global_table[:func_args] = {}
     end
 
     if global_table[:func].has_key?(name)

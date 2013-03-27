@@ -1,4 +1,6 @@
-require 'expression.rb'
+load 'expression.rb'
+
+LOCAL_COUNT = 8
 
 # Local table usage:
 # [:var_index] contains next unused index (int)
@@ -28,7 +30,14 @@ def process_var(line, match, global_table, local_table)
         return nil
     end
 
-    if local_table[:var].has_value?(name)
+    if local_table[:var] == nil
+        local_table[:var] = {}
+    end
+    if local_table[:var_type] == nil
+        local_table[:var_type] = {}
+    end
+
+    if local_table[:var].has_key?(name)
         puts "Redeclared local variable " + name
         return nil
     end
@@ -51,7 +60,7 @@ end
 # [:const_value][name] = value of const (string)
 # [:const_type][name] = type of const (string)
 
-def process_const(line, match, global_table, local_table)
+def process_const_decl(line, match, global_table, local_table)
     name = match[1]
     type = match[2]
     value = match[3]
@@ -66,7 +75,14 @@ def process_const(line, match, global_table, local_table)
         return nil
     end
 
-    if global_table[:const_value].has_value?(name)
+    if global_table[:const_value] == nil
+        global_table[:const_value] = {}
+    end
+    if global_table[:const_type] == nil
+        global_table[:const_type] = {}
+    end
+
+    if global_table[:const_value].has_key?(name)
         puts "Redeclared constant " + name
         return nil
     end
@@ -77,6 +93,9 @@ def process_const(line, match, global_table, local_table)
     return true
 end
 
+# Adds an instruction for setting the value of a variable
+# Checks to ensure that the variable was previously defined and that it has
+# a proper expression
 def process_set(line, match, global_table, local_table)
 
     unless global_table and local_table
@@ -108,3 +127,4 @@ def process_set(line, match, global_table, local_table)
 
     return true
 end
+
