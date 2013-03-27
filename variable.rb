@@ -1,3 +1,5 @@
+require 'expression.rb'
+
 # Local table usage:
 # [:var_index] contains next unused index (int)
 # [:var][name] contains index (0-7) for variable (int)
@@ -71,6 +73,38 @@ def process_const(line, match, global_table, local_table)
 
     global_table[:const_value][name] = value
     global_table[:const_type][name] = type
+
+    return true
+end
+
+def process_set(line, match, global_table, local_table)
+
+    unless global_table and local_table
+        puts "Must have value for global and local tables"
+        return nil
+    end
+
+    name = match[1]
+    value = match[2]
+
+    unless local_table[:var].has_value?(name)
+        puts "Undeclared variable '#{name}'"
+        return nil
+    end
+
+    value = process_expresion(value)
+
+    if value == nil
+        return nil
+    end
+
+    result = { :type  => :assign,
+               :ident => name,
+               :value => value
+    }
+
+    instruction_list = local_table[:instructions]
+    instruction_list<< result
 
     return true
 end
