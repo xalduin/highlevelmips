@@ -23,6 +23,15 @@ OP_TABLE = {
     OP_DIV            => :div
 }
 
+OP_OPPOSITE_TABLE = {
+    :equal            => :not_equal,
+    :not_equal        => :equal,
+    :less             => :greater_equal,
+    :less_equal       => :greater,
+    :greater          => :less_equal,
+    :greater_equal    => :less
+}
+
 # :symbol -> bool
 # Returns whether the specified operation is a boolean operation
 def is_op_conditional(op)

@@ -5,8 +5,11 @@ INDENT_SIZE = 4
 R_RETURN_ADDRESS = '$ra'
 R_STACK_POINTER  = '$sp'
 R_FRAME_POINTER  = '$fp'
+R_ZERO           = '$zero'
 
 # Register suffixes, (s registers, t registers, etc)
+LOCAL_REGISTER_COUNT = 8
+TEMP_REGISTER_COUNT = 10
 RS_LOCAL = '$s'
 RS_TEMP  = '$t' 
 
@@ -17,6 +20,8 @@ RS_TEMP  = '$t'
 # Add, add immediate
 I_ADD  = 'add'
 I_ADDI = 'addi'
+
+I_SUB  = 'sub'
 
 # Store word, half, byte
 I_SW   = 'sw'
@@ -31,6 +36,18 @@ I_LB   = 'lb'
 # Jump, jump register
 I_J    = 'j'
 I_JR   = 'jr'
+
+I_BEQ  = "beq"
+I_BNE  = "bne"
+
+I_BLEZ = 'blez'
+I_BGTZ = 'bgtz'
+
+# Load immediate
+I_LI   = 'li'
+
+# Set less than
+I_SLT  = 'slt'
 
 # Returns a string with proper indentation
 def instruction_string(inst, params)
@@ -49,6 +66,10 @@ def generate_addi(dest, source, value)
     return instruction_string(I_ADDI, "#{dest}, #{source}, #{value}")
 end
 
+def generate_sub(dest, left, right)
+    return instruction_string(I_SUB, "#{dest}, #{left}, #{right}")
+end
+
 def generate_sw(value, address, offset)
     #TODO: Assert value is a register, address is register, offset is 16bit
     
@@ -61,6 +82,9 @@ def generate_lw(dest, address, offset)
     return instruction_string(I_LW, "#{dest}, #{offset}(#{address})")
 end
 
+##################################
+# Jump instructions
+
 def generate_j(dest)
     return instruction_string(I_J, "#{dest}")
 end
@@ -72,4 +96,39 @@ end
 
 def generate_jr(register)
     return instruction_string(I_JR, "#{register}")
+end
+
+###################################
+# Branch instructions
+
+def generate_beq(left, right, dest)
+    #TODO: Assert left and right registers, dest is 16 bit
+
+    return instruction_string(I_BEQ, "#{left}, #{right}, #{dest}")
+end
+
+def generate_bne(left, right, dest)
+    return instruction_string(I_BNE, "#{left}, #{right}, #{dest}")
+end
+
+# branch <= 0
+def generate_blez(value, dest)
+    return instruction_string(I_BLEZ, "#{value}, #{dest}")
+end
+
+# branch > 0
+def generate_bgtz(value, dest)
+    return instruction_string(I_BGTZ, "#{value}, #{dest}")
+end
+
+##################################
+# Misc
+
+def generate_li(dest, immediate)
+    return instruction_string(I_LI, "#{dest}, #{immediate}")
+end
+
+# Set less than
+def generate_slt(dest, left, right)
+    return insruction_string(I_SLT, "#{dest}, #{left}, #{right}")
 end
