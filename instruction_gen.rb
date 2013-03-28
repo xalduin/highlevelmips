@@ -1,6 +1,5 @@
 load 'instructions.rb'
 
-
 def generate_branch(expression, dest_label, local_table)
     # Constant expressions require no condition checking
     if expression == true
@@ -38,10 +37,10 @@ def generate_branch(expression, dest_label, local_table)
         right_reg = RS_TEMP + right_index.to_s
 
         # Generate the load immediate instruction
-        result<< generate_li(right_reg)
+        result<< generate_li(right_reg, right_value)
     end
 
-    left_reg = get_variable_register(left_value)
+    left_reg = get_variable_register(left_value, local_table)
 
     # The set less than instruction is used for < and >=
     if operation == :less || operation == :greater_equal
@@ -114,7 +113,7 @@ def generate_endloop(func_name, instruction)
 end
 
 def get_variable_register(name, local_table)
-    return RS_LOCAL + local_table[:var][name]
+    return RS_LOCAL + local_table[:var][name].to_s
 end
 
 def generate_exitwhen(func_name, instruction, local_table)

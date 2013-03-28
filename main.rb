@@ -3,6 +3,8 @@ load 'variable.rb'
 load 'func.rb'
 load 'loop.rb'
 
+load 'func_gen.rb'
+
 LOCAL_COUNT = 8
 
 def valid_type?(type)
@@ -70,7 +72,7 @@ def process_line(line, table)
     return nil
 end
     
-def run_program()
+def create_table()
     text = File.open("input.hlm").read
     text.gsub!(/\r\n?/, "\n")
 
@@ -91,6 +93,18 @@ def run_program()
     puts "Finished"
 
     return table
+end
+
+def create_program(table, output_file)
+    result = []
+    File.open(output_file, "w") do |file|
+        result = generate_program(table)
+        result.each do |line|
+            file << line + "\n"
+        end
+    end
+
+    return result
 end
 
 #run_program

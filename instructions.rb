@@ -1,5 +1,5 @@
 REGISTER_SIZE = 4
-INDENT_SIZE = 4
+INDENT_SIZE = 8
 
 # Registers
 R_RETURN_ADDRESS = '$ra'
@@ -51,7 +51,15 @@ I_SLT  = 'slt'
 
 # Returns a string with proper indentation
 def instruction_string(inst, params)
-    return "#{inst} #{params}"
+    result = " " * INDENT_SIZE
+
+    result += inst
+    param_indent = INDENT_SIZE - inst.length
+
+    result += " " * param_indent
+    result += params
+
+    return result
 end
 
 def generate_label(name)

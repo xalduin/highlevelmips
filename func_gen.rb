@@ -91,7 +91,16 @@ def generate_func(name, global_table)
     result<< generate_label("func_" + name + "_done")
     result += generate_stack_deallocate(stack_size)
 
-    result<< generate_jr()
+    result<< generate_jr(R_RETURN_ADDRESS)
+
+    return result
+end
+
+def generate_program(global_table)
+    result = []
+    global_table[:func].each_key do |func_name|
+        result += generate_func(func_name, global_table)
+    end
 
     return result
 end
