@@ -32,6 +32,13 @@ OP_OPPOSITE_TABLE = {
     :greater_equal    => :less
 }
 
+OP_COMMUTATIVE_TABLE = {
+    :add => true,
+    :sub => false,
+    :mul => true,
+    :div => false
+}
+
 # :symbol -> bool
 # Returns whether the specified operation is a boolean operation
 def is_op_conditional(op)
@@ -68,11 +75,13 @@ end
 # 3. right hand side
 EXP_REGEXP = /((?:[a-zA-Z]\w*)|(?:\d+))\s*(\S{1,2})\s*((?:[a-zA-Z]\w*)|(?:\d+))/
 
-CONST_REGEXP = /^\d+$/
+CONST_REGEXP = /^(\d+)$/
 
 # int * symbol * int -> bool/int/nil
 # evaulates the expression and returns a calculated value
 def evaluate_const(left, op, right)
+    left = Integer(left)
+    right = Integer(right)
     case op
         when :add
             return left + right
@@ -101,8 +110,14 @@ def evaluate_const(left, op, right)
     end
 end
 
-def process_expression_helper(text)
+def process_expression_helper(text, local_table)
     text.strip!
+
+    # First check if text is a constant
+    match = text.match(CONST_REGEXP)
+    if match
+        return Integer(match[1])
+    end
 
     match = text.match(EXP_REGEXP)
     unless match
@@ -130,12 +145,20 @@ def process_expression_helper(text)
         result[:left] = [:const, left]
     else
         result[:left] = [:ident, left]
+        unless lookup_var(left, local_table)
+            puts "Unknown variable '#{left}'"
+            return nil
+        end
     end
 
     if right_constant
         result[:right] = [:const, right]
     else
         result[:right] = [:ident, right]
+        unless lookup_var(right, local_table)
+            puts "Unknown variable '#{right}'"
+            return nil
+        end
     end
 
     return result
@@ -147,15 +170,18 @@ end
 #
 # :type for the array is either :const or :ident
 # :type for the operation is one of the above listed
-def process_expression(text)
-    result = process_expression(text)
+def process_expression(text, local_table)
+    result = process_expression_helper(text, local_table)
 
     if result == nil
         return nil
+    elsif result.is_a? Integer
+        return result
     end
 
     left_constant  = result[:left][0] == :const
     right_constant = result[:right][0] == :const
+    operator = result[:op]
 
     if left_constant and right_constant
         left = result[:left][1]
@@ -176,8 +202,28 @@ def process_expression(text)
             return result
         end
     end
+
+    return result
 end
-    
+ 
+def process_noncondition_expression(text, local_table)
+    result = process_expression(text, local_table)
+
+    if result == nil
+        return nil
+    end
+
+    if result.is_a? Integer
+        return result
+    end
+
+    if is_op_conditional(result[:op])
+        puts "Expected non conditional expression"
+        return nil
+    end
+
+    return result
+end
 
 # string -> {:left => [:type, value], :op => :type, :right => [:type, value]}
 # or, for a constant expression
@@ -186,8 +232,8 @@ end
 #
 # :type for the array is either :const or :ident
 # :type for the operation is one of the above listed
-def process_condition(text)
-    result = process_expression_helper(text)
+def process_condition(text, local_table)
+    result = process_expression_helper(text, local_table)
 
     if result == nil
         return nil

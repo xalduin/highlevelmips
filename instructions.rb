@@ -12,6 +12,7 @@ LOCAL_REGISTER_COUNT = 8
 TEMP_REGISTER_COUNT = 10
 RS_LOCAL = '$s'
 RS_TEMP  = '$t' 
+RS_ARG   = '$a'
 
 ##############
 # Instructions
@@ -21,7 +22,14 @@ RS_TEMP  = '$t'
 I_ADD  = 'add'
 I_ADDI = 'addi'
 
+# Subtraction
 I_SUB  = 'sub'
+
+# Pseudo multiplication
+I_MUL  = 'mul'
+
+# Division (both the regular and pseudo use the same op code)
+I_DIV  = 'div'
 
 # Store word, half, byte
 I_SW   = 'sw'
@@ -36,12 +44,16 @@ I_LB   = 'lb'
 # Jump, jump register
 I_J    = 'j'
 I_JR   = 'jr'
+I_JAL  = 'jal'
 
 I_BEQ  = "beq"
 I_BNE  = "bne"
 
 I_BLEZ = 'blez'
 I_BGTZ = 'bgtz'
+
+# Move
+I_MOVE = 'move'
 
 # Load immediate
 I_LI   = 'li'
@@ -68,6 +80,12 @@ def generate_label(name)
     return "#{name}:"
 end
 
+def generate_add(dest, left, right)
+    #TODO: Assert registers?
+    
+    return instruction_string(I_ADD, "#{dest}, #{left}, #{right}")
+end
+
 def generate_addi(dest, source, value)
     #TODO: Assert value is 16-bit value
 
@@ -76,6 +94,14 @@ end
 
 def generate_sub(dest, left, right)
     return instruction_string(I_SUB, "#{dest}, #{left}, #{right}")
+end
+
+def generate_mul(dest, left, right)
+    return instruction_string(I_MUL, "#{dest}, #{left}, #{right}")
+end
+
+def generate_div(dest, left, right)
+    return instruction_string(I_DIV, "#{dest}, #{left}, #{right}")
 end
 
 def generate_sw(value, address, offset)
@@ -106,6 +132,10 @@ def generate_jr(register)
     return instruction_string(I_JR, "#{register}")
 end
 
+def generate_jal(dest)
+    return instruction_string(I_JAL, "#{dest}")
+end
+
 ###################################
 # Branch instructions
 
@@ -131,6 +161,10 @@ end
 
 ##################################
 # Misc
+
+def generate_move(dest_register, source_register)
+    return instruction_string(I_MOVE, "#{dest_register}, #{source_register}")
+end
 
 def generate_li(dest, immediate)
     return instruction_string(I_LI, "#{dest}, #{immediate}")

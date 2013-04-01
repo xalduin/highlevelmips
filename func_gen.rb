@@ -1,5 +1,5 @@
-load 'instructions.rb'
-load 'instruction_gen.rb'
+require_relative 'instructions.rb'
+require_relative 'instruction_gen.rb'
 
 # Int -> [String]
 # size: number of bytes to allocate, should be a minimum of 8
@@ -19,10 +19,10 @@ def generate_stack_allocate(size)
     # Allocate space on stack
     result<< generate_addi(R_STACK_POINTER, R_STACK_POINTER, -size)
 
-    # Store the frame pointer on the bottom of the stack
+    # Store the frame pointer on the top of the stack
     result<< generate_sw(R_FRAME_POINTER, R_STACK_POINTER, 0)
 
-    # Set frame pointer to correct location
+    # Set frame pointer to location of return address
     result<< generate_addi(R_FRAME_POINTER,
                            R_STACK_POINTER,
                            size - REGISTER_SIZE)
@@ -54,6 +54,14 @@ end
 def generate_stack_deallocate(size)
     result = []
 
+    index = 0
+    while index * (REGISTER_SIZE) < size - (REGISTER_SIZE * 2)
+        result<<generate_lw(RS_LOCAL + index.to_s,
+                            R_FRAME_POINTER,
+                            -(index + 1) * REGISTER_SIZE)
+
+        index += 1
+    end
     # Restore return address and frame pointer
     result<< generate_lw(R_RETURN_ADDRESS, R_FRAME_POINTER, 0)
     result<< generate_lw(R_FRAME_POINTER, R_STACK_POINTER, 0)

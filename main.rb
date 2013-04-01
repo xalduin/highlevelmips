@@ -1,11 +1,11 @@
-load 'statement.rb'
-load 'variable.rb'
-load 'func.rb'
-load 'loop.rb'
+require_relative 'statement.rb'
+require_relative 'variable.rb'
+require_relative 'func.rb'
+require_relative 'loop.rb'
+require_relative 'if.rb'
+require_relative 'func_call.rb'
 
-load 'func_gen.rb'
-
-LOCAL_COUNT = 8
+require_relative 'func_gen.rb'
 
 def valid_type?(type)
     return VAR_TYPES.include?(type)
@@ -49,6 +49,16 @@ def process_line(line, table)
         return process_if(line, match, table, local_table)
     end
 
+    match = line.match(B_ELSE_DECL)
+    if match
+        return process_else(line, match, table, local_table)
+    end
+
+    match = line.match(B_ENDIF)
+    if match
+        return process_endif(line, match, table, local_table)
+    end
+
     match = line.match(B_LOOP_DECL)
     if match
         return process_loop(line, match, table, local_table)
@@ -62,6 +72,16 @@ def process_line(line, table)
     match = line.match(B_ENDLOOP)
     if match
         return process_endloop(line, match, table, local_table)
+    end
+
+    match = line.match(S_FUNC_CALL)
+    if match
+        return process_func_call(line, match, table, local_table)
+    end
+
+    match = line.match(S_SET_VAR)
+    if match
+        return process_set(line, match, table, local_table)
     end
 
     if line.match(/^\s*$/)
@@ -90,7 +110,6 @@ def create_table()
 
         line_number += 1
     end
-    puts "Finished"
 
     return table
 end

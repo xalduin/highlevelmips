@@ -1,4 +1,6 @@
-load 'statement.rb'
+require_relative 'statement.rb'
+require_relative 'expression.rb'
+require_relative 'variable.rb'
 
 FUNC_ARGS_REGEXP = /([a-zA-Z]\w*)\s*:\s*([a-zA-Z]+)/
 
@@ -117,3 +119,66 @@ def process_endfunc(line, match, global_table)
     global_table[:current_func] = nil
     return true
 end
+
+NUM_REGEXP = /^(\d)+$/
+VAR_REGEXP   = /^([a-zA-Z]\w*)$/
+
+def process_return(line, match, global_table, local_table)
+    unless global_table[:current_func]
+        puts "Return statement must be used inside a function"
+        return nil
+    end
+
+    instruction_list = local_table[:instructions]
+    instruction = {:type => :return}
+
+    if match[1] == nil
+        instruction[:value_type] = :none
+        instruction_list<< instruction
+        return true
+    end
+
+    value = match[1].trim!
+
+    match = value.match(NUM_REGEXP)
+    if match
+        return_val = Integer(match[1])
+        instruction[:value_type] = :const
+        instruction[:value] = return_val
+        instruction_list<< instruction
+        return true
+    end
+
+    match = value.match(VAR_REGEXP)
+    if match
+        var = match[1]
+
+        unless lookup_var(var, local_table)
+            puts "Unknown variable '#{var}'"
+            return nil
+        end
+
+        instruction[:value_type] = :var
+        instruction[:value] = var
+        instruction_list<< instruction
+        return true
+    end
+
+    # Assume that expression parsing is necessary
+    result = process_noncondition_expression(value, local_table)
+
+    unless result
+        return nil
+    end
+
+    if result.is_a? Integer
+        instruction[:value_type] = :const
+    else
+        instruction[:value_type] = :expression
+    end
+
+    instruction[:value] = result
+    instruction_list<< instruction
+    return true
+end
+    

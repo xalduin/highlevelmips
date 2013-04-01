@@ -1,6 +1,25 @@
-load 'expression.rb'
+require_relative 'expression.rb'
 
 LOCAL_COUNT = 8
+
+def lookup_var(name, local_table)
+    unless local_table
+        return nil
+    end
+
+    unless local_table[:var] && local_table[:var_type]
+        return nil
+    end
+
+    index = local_table[:var][name]
+    type  = local_table[:var_type][name]
+
+    if index == nil || type == nil
+        return nil
+    end
+
+    return index, type
+end
 
 # Local table usage:
 # [:var_index] contains next unused index (int)
@@ -106,25 +125,30 @@ def process_set(line, match, global_table, local_table)
     name = match[1]
     value = match[2]
 
-    unless local_table[:var].has_value?(name)
+    unless local_table[:var].has_key?(name)
         puts "Undeclared variable '#{name}'"
         return nil
     end
 
-    value = process_expresion(value)
+    value = process_noncondition_expression(value, local_table)
 
     if value == nil
         return nil
     end
 
-    result = { :type  => :assign,
-               :ident => name,
-               :value => value
+    instruction = {:type  => :assign,
+                   :ident => name,
+                   :value => value
     }
 
+    if value.is_a? Integer
+        instruction[:value_type] = :const
+    else
+        instruction[:value_type] = :expression
+    end
+
     instruction_list = local_table[:instructions]
-    instruction_list<< result
+    instruction_list<< instruction
 
     return true
 end
-

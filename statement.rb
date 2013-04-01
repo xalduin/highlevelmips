@@ -31,12 +31,12 @@ S_SET_ARRAY = /([a-zA-Z]\w*) \s* \[ \s* (\d+) \s* \] \s* = \s* (.+)/x
 
 # Matching for return statement
 # 1. Return value expression
-S_RETURN = /return \s+ (.*)/x
+S_RETURN = /^return \s+ (.*)$/x
 
 # Matching for function call
 # 1. identifier
 # 2. all arguments as a single string (spaces included)
-S_FUNC_CALL = /([a-zA-Z]\w*) \s* \( \s* ((\w+)? \s*(\,\s*(\w+))*) \s* \)/x
+S_FUNC_CALL = /^([a-zA-Z]\w*) \s* \( \s* ((\w+)? \s*(\,\s*(\w+))*) \s* \)$/x
 
 # Matching for function declaration
 # 1. function identifier
@@ -56,14 +56,14 @@ B_FUNC_DECL = /func\s+
      ([a-zA-Z]+)
     )?/x
 
-B_ENDFUNC = /endfunc/
+B_ENDFUNC = /^endfunc$/
 
 # Matching for if statement
 # 1. Expression to be evaluated for if
-B_IF_DECL = /if \s+ (\S.+) \s+ then/x
+B_IF_DECL = /^if \s+ (\S.+) \s* $/x
 
-B_ELSE_DECL = /else/
-B_ENDIF = /endif/
+B_ELSE_DECL = /^else$/
+B_ENDIF = /^endif$/
 
 B_LOOP_DECL = /^\s*loop\s*$/
 B_ENDLOOP = /^\s*endloop\s*$/

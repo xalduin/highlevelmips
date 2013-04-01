@@ -1,4 +1,4 @@
-load 'expression.rb'
+require_relative 'expression.rb'
 
 # String * MatchData * {} * {} -> true/nil
 # Process a loop declaration
@@ -103,7 +103,7 @@ def process_exitwhen(line, match, global_table, local_table)
     end
 
     expression = match[1]
-    value = process_condition(expression)
+    value = process_condition(expression, local_table)
 
     if value == nil
         return nil

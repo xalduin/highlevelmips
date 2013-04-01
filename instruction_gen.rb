@@ -1,4 +1,4 @@
-load 'instructions.rb'
+require_relative 'instructions.rb'
 
 def generate_branch(expression, dest_label, local_table)
     # Constant expressions require no condition checking
@@ -92,6 +92,101 @@ def generate_branch_negation(expression, dest, local_table)
     return generate_branch(new_expression, dest, local_table)
 end
 
+def generate_expression(dest, expression, local_table)
+
+    # If the expression is a constant, a load immediate will be fine
+    if expression.is_a? Integer
+        return [generate_li(dest, expression)]
+
+    elsif expression == true
+        return [generate_li(dest, 1)]
+
+    elsif expression == false
+        return [generate_li(dest, 0)]
+    end
+
+    # Create a stack of temp registers that can be popped if necessary
+    temp_register_stack = Array(0..(TEMP_REGISTER_COUNT - 1))
+    result = []
+
+    left = expression[:left]
+    left_type = left[0]
+    left_value = left[1]
+    right = expression[:right]
+    right_type = right[0]
+    right_value = right[1]
+    operation = expression[:op]
+
+    left_reg = nil
+    right_reg = nil
+
+    # Immediate values must either be the 2nd argument or be stored in
+    # a register
+    if left_type == :const
+        commutative = OP_COMMUTATIVE_TABLE[operation]
+
+        # Commutative operations allow for the left/right side to be
+        # swapped without problem
+        if commutative
+            left_type, right_type = right_type, left_type
+            left_value, right_value = right_value, left_value
+
+        # Otherwise, the constant should be loaded into a register
+        else
+            temp_index = temp_register_stack.pop
+            left_reg = RS_TEMP + temp_index.to_s
+
+            result<< generate_li(left_reg, left_value)
+        end
+    end
+
+    # Left side refers to a variable
+    unless left_reg
+        left_reg = get_variable_register(left_value, local_table)
+    end
+
+    # Right side is a variable
+    if right_type == :ident
+        right_reg = get_variable_register(right_value, local_table)
+    end
+
+    case operation
+    when :add
+        if right_type == :const
+            result<< generate_addi(dest, left_reg, right_value)
+        else
+            result<< generate_add(dest, left_reg, right_reg)
+        end
+
+    when :mul
+        if right_type == :const
+            result<< generate_mul(dest, left_reg, right_value)
+        else
+            result<< generate_mul(dest, left_reg, right_reg)
+        end
+
+    when :sub
+        if right_type == :const
+            result<< generate_addi(dest, left_reg, "-" + right_value)
+        else
+            result<< generate_sub(dest, left_reg, right_reg)
+        end
+
+    when :div
+        if right_type == :const
+            result<< generate_div(dest, left_reg, right_value)
+        else
+            result<< generate_div(dest, left_reg, right_reg)
+        end
+
+    else
+        puts "Unrecognized operation '#{operation}'"
+        return nil
+    end
+
+    return result
+end
+
 def loop_name(func_name, index)
     return "func_#{func_name}_loop#{index}"
 end
@@ -112,6 +207,45 @@ def generate_endloop(func_name, instruction)
     return result
 end
 
+def if_name(func_name, index)
+    return "func_#{func_name}_if#{index}"
+end
+
+def generate_if(func_name, instruction, local_table)
+    index      = instruction[:index]
+    expression = instruction[:value]
+
+    has_else = local_table[:if_has_else][index]
+    dest_label = if_name(func_name, index)
+
+    if has_else
+        dest_label += "_else"
+    else
+        dest_label += "_end"
+    end
+
+    return generate_branch_negation(expression, dest_label, local_table)
+end
+
+# Else statement is in the format:
+# jump to endif
+# else statement label
+def generate_else(func_name, instruction)
+    index = instruction[:index]
+    result = []
+
+    result<< generate_j( if_name(func_name, index) + "_end" )
+    result<< generate_label( if_name(func_name, index) + "_else" )
+    return result
+end
+
+def generate_endif(func_name, instruction)
+    index = instruction[:index]
+
+    label_name = if_name(func_name, index) + "_end"
+    return [ generate_label(label_name) ]
+end
+
 def get_variable_register(name, local_table)
     return RS_LOCAL + local_table[:var][name].to_s
 end
@@ -124,17 +258,72 @@ def generate_exitwhen(func_name, instruction, local_table)
     return generate_branch(expression, dest_label, local_table)
 end
 
+def generate_func_call(func_name, instruction, local_table)
+    func_ident = instruction[:ident]
+    func_args = instruction[:args]
+
+    result = []
+
+    arg_num = 0
+    func_args.each do |arg|
+        arg_type = arg[:type]
+        arg_value = arg[:value]
+        arg_register = RS_ARG + arg_num.to_s
+
+        if arg_type == :const
+            result<< generate_li(arg_register, arg_value)
+        else
+            result<< generate_move(arg_register, arg_value)
+        end
+
+        arg_num += 1
+    end
+
+    result<< generate_jal("func_" + func_ident)
+    return result
+end
+
+def generate_assign(func_name, instruction, local_table)
+    ident = instruction[:ident]
+    value_type = instruction[:value_type]
+    value = instruction[:value]
+
+    var_register = get_variable_register(ident, local_table)
+
+    if value_type == :const
+        return [generate_li(var_register, value)]
+    end
+
+    # Value type is an expression
+    return generate_expression(var_register, value, local_table)
+end
+
 
 def generate_instruction(instruction, global_table, local_table)
     type = instruction[:type]
     func_name = global_table[:current_func]
 
     case type
+    when :if
+        return generate_if(func_name, instruction, local_table)
+    when :else
+        return generate_else(func_name, instruction)
+    when :endif
+        return generate_endif(func_name, instruction)
+
     when :loop
         return generate_loop(func_name, instruction)
     when :endloop
         return generate_endloop(func_name, instruction)
     when :exitwhen
         return generate_exitwhen(func_name, instruction, local_table)
+
+    when :func_call
+        return generate_func_call(func_name, instruction, local_table)
+    when :assign
+        return generate_assign(func_name, instruction, local_table)
+    else
+        puts "Unrecognized instruction type '#{type}'"
+        return []
     end
 end
