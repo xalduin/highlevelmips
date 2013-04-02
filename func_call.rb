@@ -90,7 +90,7 @@ def process_func_call_args(call_args, result_list, func_params, local_table)
             var_type = var[1].to_sym
 
             unless valid_type_match(var_type, param_type)
-                puts "Cannot convert '#{var}:#{var_type}' to #{param_type}"
+                puts "Cannot convert '#{arg}:#{var_type}' to #{param_type}"
                 return nil
             end
 
@@ -101,6 +101,12 @@ def process_func_call_args(call_args, result_list, func_params, local_table)
         result_list<< entry
         index += 1
     end
+
+    if index < func_params.size
+        puts "Expected #{func_params.size} arguments, only #{index} supplied"
+        return nil
+    end
+
     return true 
 end
 

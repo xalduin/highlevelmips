@@ -22,7 +22,9 @@ def generate_branch(expression, dest_label, local_table)
     # Immediate values must be the 2nd argument, so perform a negation and
     # argument order swap
     if left_type == :const
-        operation = OP_OPPOSITE_TABLE[operation]
+        if OP_COMMUTATIVE_TABLE[operation] == false
+            operation = OP_OPPOSITE_TABLE[operation]
+        end
 
         left_type, right_type = right_type, left_type
         left_value, right_value = right_value, left_value
@@ -88,6 +90,8 @@ def generate_branch_negation(expression, dest, local_table)
         :right => left,
         :op => operation
     }
+
+    puts "New expression '#{new_expression}'"
 
     return generate_branch(new_expression, dest, local_table)
 end

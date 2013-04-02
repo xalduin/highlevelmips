@@ -36,7 +36,14 @@ OP_COMMUTATIVE_TABLE = {
     :add => true,
     :sub => false,
     :mul => true,
-    :div => false
+    :div => false,
+
+    :equal         => true,
+    :not_equal     => true,
+    :less          => false,
+    :less_equal    => false,
+    :greater       => false,
+    :greater_equal => false
 }
 
 # :symbol -> bool

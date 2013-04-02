@@ -13,10 +13,10 @@ end
 
 def process_line(line, table)
     # Remove leading whitespace, comments and extra spaces
-    line.strip!
+    line = line.strip
     line.gsub!(/#.*/, '')
     line.gsub!(/  /, ' ')
-    line.gsub!(/ *, */, ',')
+    line.gsub!(/\s*,\s*/, ',')
 
     local_table = nil
     func_name = table[:current_func]
