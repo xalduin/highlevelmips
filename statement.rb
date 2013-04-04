@@ -3,13 +3,9 @@ VAR_TYPES = ['word', 'half', 'byte']
 #Matching for variable declaration
 # 1. identifier
 # 2. type
-#
-# 3 and 4 are optional
-#
-# 3. Everything after type (ignore this)
-# 4. Expression value of right hand side
+# 3. [] if the type is an array (optional)
 
-S_VAR_DECL   = /^var   \s+ ([a-zA-Z]\w*)+ \s* : \s* (\w+) \s* (= \s* (.+))?/x
+S_VAR_DECL   = /^var \s+ ([a-zA-Z]\w*)+ \s* : \s* (\w+) (\[ \])? $/x
 
 # Matching for const declaration
 # 1. identifier
