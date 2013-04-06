@@ -1,3 +1,5 @@
+require_relative 'variable.rb'
+
 OP_EQUAL = '=='
 OP_NOT_EQUAL = '!='
 OP_LESS = '<'
@@ -72,15 +74,24 @@ def is_op_conditional(op)
         return false
     end
     
-    puts "is_op_conditional case error"
-    return false
+    raise "is_op_conditional case error"
 end
 
 # Expression regular expression
 # 1. left hand side
 # 2. operator
 # 3. right hand side
-EXP_REGEXP = /((?:[a-zA-Z]\w*)|(?:\d+))\s*(\S{1,2})\s*((?:[a-zA-Z]\w*)|(?:\d+))/
+EXP_REGEXP = /
+    (
+        (?:[a-zA-Z]\w*) | (?:\d+)
+    )
+    \s*
+        (\S{1,2})
+    \s*
+    (
+        (?:[a-zA-Z]\w*) | (?:\d+)
+    )
+    /x
 
 CONST_REGEXP = /^(\d+)$/
 
@@ -112,12 +123,11 @@ def evaluate_const(left, op, right)
         when :greater_equal
             return left >= right
         else
-            puts "Invalid operator? '#{op}'"
-            return nil
+            raise "Internal: eval_const: invalid op? '#{op}'"
     end
 end
 
-def process_expression_helper(text, local_table)
+def process_expression_helper(text, var_list)
     text.strip!
 
     # First check if text is a constant
@@ -128,8 +138,7 @@ def process_expression_helper(text, local_table)
 
     match = text.match(EXP_REGEXP)
     unless match
-        puts "Invalid expression format"
-        return nil
+        raise "Invalid expression format"
     end
 
     left = match[1]
@@ -137,8 +146,7 @@ def process_expression_helper(text, local_table)
     right = match[3]
 
     unless OP_TABLE.has_key?(operator)
-        puts "Unknown operator '#{operator}'"
-        return nil
+        raise "Unknown operator '#{operator}'"
     end
     operator = OP_TABLE[operator]
 
@@ -151,21 +159,19 @@ def process_expression_helper(text, local_table)
     if left_constant
         result[:left] = [:const, left]
     else
-        result[:left] = [:ident, left]
-        unless lookup_var(left, local_table)
-            puts "Unknown variable '#{left}'"
-            return nil
+        unless var_list.include? left
+            raise "Unknown variable '#{left}'"
         end
+        result[:left] = [:ident, var_list.get(left)]
     end
 
     if right_constant
         result[:right] = [:const, right]
     else
-        result[:right] = [:ident, right]
-        unless lookup_var(right, local_table)
-            puts "Unknown variable '#{right}'"
-            return nil
+        unless var_list.include? right
+            raise "Unknown variable '#{right}'"
         end
+        result[:right] = [:ident, var_list.get(right)]
     end
 
     return result
@@ -177,12 +183,10 @@ end
 #
 # :type for the array is either :const or :ident
 # :type for the operation is one of the above listed
-def process_expression(text, local_table)
-    result = process_expression_helper(text, local_table)
+def process_expression(text, var_list)
+    result = process_expression_helper(text, var_list)
 
-    if result == nil
-        return nil
-    elsif result.is_a? Integer
+    if result.is_a? Integer
         return result
     end
 
@@ -213,20 +217,15 @@ def process_expression(text, local_table)
     return result
 end
  
-def process_noncondition_expression(text, local_table)
-    result = process_expression(text, local_table)
-
-    if result == nil
-        return nil
-    end
+def process_noncondition_expression(text, var_list)
+    result = process_expression(text, var_list)
 
     if result.is_a? Integer
         return result
     end
 
     if is_op_conditional(result[:op])
-        puts "Expected non conditional expression"
-        return nil
+        raise "Expected non conditional expression"
     end
 
     return result
@@ -239,18 +238,13 @@ end
 #
 # :type for the array is either :const or :ident
 # :type for the operation is one of the above listed
-def process_condition(text, local_table)
-    result = process_expression_helper(text, local_table)
-
-    if result == nil
-        return nil
-    end
+def process_condition(text, var_list)
+    result = process_expression_helper(text, var_list)
 
     operator = result[:op]
 
     unless is_op_conditional(operator)
-        puts "Given operator isn't conditional '#{operator}'"
-        return nil
+        raise "Operator must be conditional '#{operator}'"
     end
 
     left_constant  = result[:left][0] == :const

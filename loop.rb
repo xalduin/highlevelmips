@@ -1,78 +1,24 @@
 require_relative 'expression.rb'
+require_relative 'function.rb'
+require_relative 'instruction_gen.rb'
 
 # String * MatchData * {} * {} -> true/nil
 # Process a loop declaration
 # Asserts that the loop is declared inside a function
-#
-# local_table adjustments:
-# [:loop_index] is incremented
-# [:loop_stack] has the last value of :loop_index appended to it
-#
-# instruction_list addition:
-# {:type => :loop, :index => loop #}
-def process_loop(line, match, global_table, local_table)
 
-    unless global_table[:current_func]
-        puts "Loops must be used inside functions"
-        return nil
-    end
-
-    if local_table[:loop_index] == nil
-        local_table[:loop_index] = 0
-    end
-    if local_table[:loop_stack] == nil
-        local_table[:loop_stack] = []
-    end 
-
-
-    loop_index = local_table[:loop_index]
-    loop_stack = local_table[:loop_stack]
-
-   # if loop_index == nil or loop_stack == nil
-   #     puts "Null loop stack?"
-   #     return nil
-   # end
-
-    loop_index += 1
-    loop_stack << loop_index
-    local_table[:loop_index] = loop_index
-    
-    instruction_list = local_table[:instructions]
-    instruction_list<< {:type => :loop, :index => loop_index}
-
+def process_loop(func)
+    instruction = LoopInstruction.new(func)
+    func.add_instruction(instruction)
     return true
 end
 
 #TODO: Ensure that all loops have been ended before ending a function
-# String * MatchData * {} * {} -> True/nil
-# true on success, nil on failure
-#
-# Post conditions:
-# loop_stack has its last element removed
-# instruction list has an endloop element added
-def process_endloop(line, match, global_table, local_table)
-    unless global_table[:current_func]
-        puts "Must end a loop inside a function"
-        return nil
-    end
+# Function -> true
+# true on success, exception raised on failure
 
-    loop_stack = local_table[:loop_stack]
-
-    if loop_stack == nil
-        puts "Null loop stack"
-        return nil
-    end
-        
-    if loop_stack.empty?
-        puts "A loop must be declared before it can be ended"
-        return nil
-    end
-
-    loop_index = loop_stack.slice!(-1)
-
-    instruction_list = local_table[:instructions]
-    instruction_list<< {:type => :endloop, :index => loop_index}
-
+def process_endloop(func)
+    instruction = EndloopInstruction.new(func)
+    func.add_instruction(instruction)
     return true
 end
     
@@ -84,37 +30,77 @@ end
 # :type => exitwhen
 # :index => loop index
 # :value => value
-def process_exitwhen(line, match, global_table, local_table)
-    unless global_table and local_table
-        puts "exitwhen must be used inside a function"
-        return nil
-    end
-
-    loop_stack = local_table[:loop_stack]
-
-    if loop_stack == nil
-        puts "exitwhen: Null loop stack"
-        return nil
-    end
-
-    if loop_stack.empty?
-        puts "Must use exitwhen within a loop"
-        return nil
-    end
-
+def process_exitwhen(match, func)
     expression = match[1]
-    value = process_condition(expression, local_table)
+    value = process_condition(expression, func.var_list)
 
-    if value == nil
-        return nil
-    end
-
-    loop_index = loop_stack[-1]
-    instruction_list = local_table[:instructions]
-    instruction_list<< {:type  => :exitwhen,
-                        :index => loop_index,
-                        :value => value
-    }
+    instruction = ExitwhenInstruction.new(value, func)
+    func.add_instruction(instruction)
 
     return true
+end
+
+class LoopInstruction
+    @@num_stack = []
+    @@index = 1
+
+    # Accessors for class variables
+    def self.index
+        @@index
+    end
+    def self.num_stack
+        num_stack
+    end
+
+    attr_reader :func, :num
+
+    def initialize(func)
+        # Assign a unique number for this if statement
+        @num = @@index
+        @@index += 1
+        @@num_stack.push(@num)
+
+        @func = func
+    end
+
+    def render
+        label = "#{@func.ident}_loop_#{@num}"
+        return [generate_label(label)]
+    end
+end
+
+class EndloopInstruction
+    attr :func, :num
+
+    def initialize(func)
+        @func = func
+        @num = LoopInstruction.num_stack.pop
+        raise "No matching loop for endloop" if @num == nil
+    end
+
+    def render
+        loop_label = "#{@func.ident}_loop_#{@num}"
+        end_label  = "#{@func.ident}_endloop_#{@num}"
+        result = []
+
+        result<< generate_j(loop_label)
+        result<< generate_label(end_label)
+        return result
+    end
+end
+
+class ExitwhenInstruction
+    attr :func, :num, :expr
+
+    def initialize(expression, func)
+        @expr = expression
+        @func = func
+        @num = LoopInstruction.num_stack.pop
+        raise "No matching loop for endloop" if @num == nil
+    end
+
+    def render
+        end_label = "#{@func.ident}_endloop_#{@num}"
+        return generate_branch(@expr, end_label, @func.var_list)
+    end
 end

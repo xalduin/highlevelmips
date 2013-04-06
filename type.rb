@@ -1,19 +1,39 @@
 module Type
-    BASE_TYPES = [:word, :half, :byte]
+
+    BASE_TYPES = [:word, :half, :byte, :word_array, :half_array, :byte_array]
     BASE_CAST = {
         :word => [:half, :byte],
         :half => [:word, :byte],
         :byte => [:word, :half]
     }
 
-    @@defined_types = {
-        :word => [:half, :byte],
-        :half => [:word, :byte],
-        :byte => [:word, :half],
-        :word_array => [],
-        :half_array => [],
-        :byte_array => []
-    }
+    @@defined_types = {}
+
+    class TypeInfo
+        attr_reader ident, size, cast_list
+
+        def add_castable(ident)
+            ident = ident.to_sym
+            if cast_list.include? ident
+                return false
+            end
+            cast_list<< ident.to_sym
+            return true
+        end
+
+        def castable?(ident)
+            return cast_list.include? ident
+        end
+
+        def initialize(ident, size, cast_list: [])
+            @ident = ident.to_sym
+
+            raise "Internal: Invalid size #{size}" if size <= 0
+            @size = size
+
+            @cast_list = cast_list
+        end
+    end
 
     # Symbol * Symbol -> true/false
     # Adds the given type symbol to the list of valid types unless it was
@@ -25,9 +45,9 @@ module Type
     # Returns:
     #   true - type added
     #   false - type already exists, not added
-    def Type.add(type_sym)
+    def Type.add(type_sym, size)
         unless @@defined_types.has_key? type_sym
-            @@defined_types[type_sym] = []
+            @@defined_types[type_sym] = TypeInfo.new(type_sym, size)
             return true
         end
         return false
@@ -44,14 +64,13 @@ module Type
     #   true - established ability to cast type1 to type 2
     #   false - failed, one of the types not defined
     def Type.add_castable(type1_sym, type2_sym)
-        type_entry = @@defined_types[type1_sym]
+        type_info = @@defined_types[type1_sym]
 
-        unless type_entry != nil && include?(type2_sym)
+        unless type_info != nil && include?(type2_sym)
             return false
         end
 
-        type_entry<< type2_sym
-        return true
+        return type_info.add_castable(type2_sym)
     end
 
     # Symbol -> true/false
@@ -75,13 +94,13 @@ module Type
     #   false - type1 cannot be cast to type2
     #   nil   - type1 is undefined
     def Type.castable?(type1_sym, type2_sym)
-        type_entry = @@defined_types[type1_sym]
+        type_info = @@defined_types[type1_sym]
 
-        if type_entry == nil
+        if type_info == nil
             return nil
         end
 
-        return type_entry.include? type2_sym
+        return type_info.castable? type2_sym
     end
 
     # Initializes the Type module

@@ -1,7 +1,19 @@
 require_relative 'statement.rb'
 require_relative 'variable.rb'
 require_relative 'expression.rb'
+require_relative 'function.rb'
+require_relative 'instructions.rb'
 
+# MatchData * VariableList -> true/false
+# Process a variable declaration line
+# Params:
+#   match - MatchData for the variable declaration
+#   var_list - VariableList to add this variable to
+#
+# Return:
+#   true on success
+#
+# Raises an exception on type error or variable re-declaration
 def process_var(match, var_list)
     ident = match[1]
     type = match[2]
@@ -9,7 +21,6 @@ def process_var(match, var_list)
 
     if var_list.has_ident?(ident)
         raise "Redeclared variable '#{ident}'"
-        return false
     end
 
     if is_array
@@ -25,40 +36,54 @@ end
 # Adds an instruction for setting the value of a variable
 # Checks to ensure that the variable was previously defined and that it has
 # a proper expression
-def process_set(line, match, global_table, local_table)
-
-    unless global_table and local_table
-        puts "Must have value for global and local tables"
-        return nil
-    end
-
+def process_set(match, function)
     name = match[1]
     value = match[2]
 
-    unless local_table[:var].has_key?(name)
-        puts "Undeclared variable '#{name}'"
-        return nil
+    unless function.is_a? Function
+        raise "Can only set variables inside functions"
     end
 
-    value = process_noncondition_expression(value, local_table)
-
-    if value == nil
-        return nil
+    var_list = function.var_list
+    unless var_list.include? name
+        raise "Undeclared variable '#{name}'"
     end
 
-    instruction = {:type  => :assign,
-                   :ident => name,
-                   :value => value
-    }
+    var = function.var_list.get(name)
+
+    value = process_noncondition_expression(value, function.var_list)
+    raise "Unable to parse expression '#{value}'" if value == nil
+
+    instruction = SetVariableInstruction.new(var, nil, value, function)
 
     if value.is_a? Integer
-        instruction[:value_type] = :const
+        instruction.value_type = :const
     else
-        instruction[:value_type] = :expression
+        instruction.value_type = :expression
     end
 
-    instruction_list = local_table[:instructions]
-    instruction_list<< instruction
-
+    function.add_instruction(instruction)
     return true
+end
+
+class SetVariableInstruction
+    attr_accessor :var, :value_type, :value, :func
+
+    def initialize(var, value_type, value, func)
+        @var = var
+        @value_type = value_type
+        @value = value
+        @func = func
+    end
+
+    def render
+        var_register = var.num
+
+        if @value_type == :const
+            return [generate_li(var_register, value)]
+        else
+            return generate_expression(var_register, func.var_list)
+        end
+    end
+
 end

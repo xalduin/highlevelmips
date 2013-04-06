@@ -3,6 +3,9 @@ require_relative 'type.rb'
 class Variable
     attr_reader :type, :ident
 
+    # Can be used in structs for offsets or for s register number
+    attr_accessor :num
+
     def initialize(typename, identity)
         # Ensure that a valid type is being used
         unless Type.include?(typename)
@@ -49,7 +52,11 @@ class VariableList
     #
     # Returns:
     #   true if this list contains the specified identifier, false otherwise
-    def has_ident?(ident)
+    def include?(ident)
         return @variables.has_key?(ident.to_sym)
+    end
+
+    def get(ident)
+        return @variables[ident]
     end
 end

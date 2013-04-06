@@ -8,8 +8,7 @@ FUNC_ARGS_REGEXP = /([a-zA-Z]\w*)\s*:\s*([a-zA-Z]+)/
 # Returns true on success, nil on failure
 
 # arg_list must be an empty array
-# Stores arguments in arg_list in the following format:
-# [{:name => String, :type => String}]
+# Stores Variables in the arg_list array
 
 def process_args(args, arg_list)
     if args == nil || args.empty?
@@ -28,12 +27,13 @@ def process_args(args, arg_list)
         name = arg_match[0]
         type = arg_match[1]
 
-        unless valid_type?(type)
+        unless Type.include?(type)
             puts "Invalid argument type '#{type}'"
             return nil
         end
 
-        arg_list<< {:name => name, :type => type}
+        var = Variable.new(type, name)
+        arg_list<< var
     end
 
     return true
@@ -44,15 +44,11 @@ end
 #
 # Modifies the global table hash in the following ways:
 # [:current_func] is set to the name of the declared function
-# [:func][name] is used to store a local table for the function
-# [:func_type][name] is used to store return type (String or nil)
-# [:func_args][name] stores a list of function args
 #
 # the local table is initialized as such:
-# [:var_index] = 0
 # [:instructions] = 0
 
-def process_func_decl(line, match, global_table)
+def process_func_decl(line, match, global_table, func_list)
     name = match[1]
     args = match[2]
     result_type = match[9]
@@ -62,43 +58,29 @@ def process_func_decl(line, match, global_table)
         return nil
     end
 
-    if global_table[:func] == nil
-        global_table[:func] = {}
-    end
-    if global_table[:func_type] == nil
-        global_table[:func_type] = {}
-    end
-    if global_table[:func_args] == nil
-        global_table[:func_args] = {}
-    end
-
-    if global_table[:func].has_key?(name)
+    if func_list.include? name
         puts "Redeclared function: '#{name}'"
         return nil
     end
 
     if result_type
-        unless valid_type?(result_type)
+        unless Type.include?(result_type)
             puts "Invalid return type '#{result_type}'"
             return nil
         end
     end
 
-    local_table = {}
     arg_list = []
 
     unless process_args(args, arg_list)
         return nil
     end
 
+    func = Function.new(name, result_type, arg_list)
+    func_list.add(func)
+
     # So far so good, store results
     global_table[:current_func] = name
-    global_table[:func][name] = local_table
-    global_table[:func_type][name] = result_type
-    global_table[:func_args][name] = arg_list
-
-    # Initialize variable index to 0 for this new function
-    local_table[:var_index] = 0
     local_table[:instructions] = []
 
     return true
