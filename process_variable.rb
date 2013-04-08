@@ -28,10 +28,13 @@ def process_var(match, block)
         type = type + "_array"
     end
 
-    var = Variable.new(type, ident)
+    var = Variable.new(type, ident, is_array)
     block.add_variable(var)
 
     return true
+end
+
+def process_array_var(match, function)
 end
 
 # Adds an instruction for setting the value of a variable
@@ -39,18 +42,28 @@ end
 # a proper expression
 def process_set(match, function)
     name = match[1]
-    value = match[2]
+    array_index = match[2]
+    value = match[3]
 
     unless function.is_a? Function
         raise "Can only set variables inside functions"
     end
 
     var_list = function.var_list
-    unless var_list.include? name
+    unless var_list.include?(name)
         raise "Undeclared variable '#{name}'"
     end
 
     var = function.var_list.get(name)
+    if array_index != nil and (not var.is_array?)
+        raise "Cannot use array index on non-array variable"
+    end
+
+    value = value.strip!
+    match = value.match(ARRAY_REGEXP)
+    if match
+    end
+        
 
     value = process_noncondition_expression(value, function.var_list)
     raise "Unable to parse expression '#{value}'" if value == nil

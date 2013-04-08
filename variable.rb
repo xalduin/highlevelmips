@@ -1,12 +1,12 @@
 require_relative 'type.rb'
 
 class Variable
-    attr_reader :type, :ident
+    attr_reader :type, :ident, :array
 
     # Can be used in structs for offsets or for s register number
     attr_accessor :num, :register
 
-    def initialize(typename, identity)
+    def initialize(typename, identity,is_array)
         typename = typename.to_sym
         # Ensure that a valid type is being used
         unless Type.include?(typename)
@@ -14,9 +14,14 @@ class Variable
         end
         @ident = identity.to_sym
         @type  = typename
+        @array = is_array
 
         @num = nil
         @register = nil
+    end
+
+    def is_array?
+        return @array
     end
 end
 

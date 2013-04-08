@@ -14,8 +14,14 @@ S_CONST_DECL = /^const \s+ ([a-zA-Z]\w*)+ \s* : \s* (\w+) \s* = \s* (.+)/x
 
 # Matching for set variable to value
 # 1. identifier
+# 2. Array index (if any)
 # 2. expression value of right hand side
-S_SET_VAR   = /([a-zA-Z]\w*) \s* = \s* (.+)/x
+S_SET_VAR   = /([a-zA-Z]\w*)
+    \s*
+    (:?\[ (\d+) \])?
+    \s* = \s* 
+    (.+)
+    /x
 
 # Matching for set variable array to value
 # 1. identifier
@@ -75,3 +81,13 @@ B_ENDLOOP = /^\s*endloop\s*$/
 B_EXITWHEN= /exitwhen \s+ (\S.+)/x
 
 VAR_REGEXP   = /^([a-zA-Z]\w*)$/
+ARRAY_REGEXP = /^
+    ([a-zA-Z]\w*) \s*
+    (:?\[ \s*
+        (
+            (:?\d+)
+            | 
+            (:?[a-zA-Z]\w*)
+        )
+    \s*
+    \])$/x
