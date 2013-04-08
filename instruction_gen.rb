@@ -1,6 +1,6 @@
 require_relative 'instructions.rb'
 
-def generate_branch(expression, dest_label, local_table)
+def generate_branch(expression, dest_label, var_list)
     # Constant expressions require no condition checking
     if expression == true
         return [ generate_j(dest_label) ]
@@ -40,9 +40,11 @@ def generate_branch(expression, dest_label, local_table)
 
         # Generate the load immediate instruction
         result<< generate_li(right_reg, right_value)
+    else
+        right_reg = right_value.register
     end
 
-    left_reg = get_variable_register(left_value, local_table)
+    left_reg = left_value.register
 
     # The set less than instruction is used for < and >=
     if operation == :less || operation == :greater_equal
@@ -91,12 +93,10 @@ def generate_branch_negation(expression, dest, local_table)
         :op => operation
     }
 
-    puts "New expression '#{new_expression}'"
-
     return generate_branch(new_expression, dest, local_table)
 end
 
-def generate_expression(dest, expression, local_table)
+def generate_expression(dest, expression, var_list)
 
     # If the expression is a constant, a load immediate will be fine
     if expression.is_a? Integer
@@ -146,12 +146,12 @@ def generate_expression(dest, expression, local_table)
 
     # Left side refers to a variable
     unless left_reg
-        left_reg = get_variable_register(left_value, local_table)
+        left_reg = left_value.register
     end
 
     # Right side is a variable
     if right_type == :ident
-        right_reg = get_variable_register(right_value, local_table)
+        right_reg = right_value.register
     end
 
     case operation
@@ -248,10 +248,6 @@ def generate_endif(func_name, instruction)
 
     label_name = if_name(func_name, index) + "_end"
     return [ generate_label(label_name) ]
-end
-
-def get_variable_register(name, local_table)
-    return RS_LOCAL + local_table[:var][name].to_s
 end
 
 def generate_exitwhen(func_name, instruction, local_table)

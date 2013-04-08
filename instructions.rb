@@ -10,9 +10,10 @@ R_ZERO           = '$zero'
 # Register suffixes, (s registers, t registers, etc)
 LOCAL_REGISTER_COUNT = 8
 TEMP_REGISTER_COUNT = 10
-RS_LOCAL = '$s'
-RS_TEMP  = '$t' 
-RS_ARG   = '$a'
+RS_LOCAL     = '$s'
+RS_TEMP      = '$t' 
+RS_ARG       = '$a'
+RS_RETURN    = '$v'
 
 ##############
 # Instructions

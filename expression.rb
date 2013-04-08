@@ -1,4 +1,5 @@
 require_relative 'variable.rb'
+require_relative 'statement.rb'
 
 OP_EQUAL = '=='
 OP_NOT_EQUAL = '!='
@@ -136,6 +137,14 @@ def process_expression_helper(text, var_list)
         return Integer(match[1])
     end
 
+    # Check if text is a variable
+    match = text.match(VAR_REGEXP)
+    if match
+        var = var_list.get(match[1])
+        raise "Undefined variable '#{var}'" if var == nil
+        return var
+    end
+
     match = text.match(EXP_REGEXP)
     unless match
         raise "Invalid expression format"
@@ -186,7 +195,7 @@ end
 def process_expression(text, var_list)
     result = process_expression_helper(text, var_list)
 
-    if result.is_a? Integer
+    if result.is_a? Integer or result.is_a? Variable
         return result
     end
 
@@ -220,7 +229,7 @@ end
 def process_noncondition_expression(text, var_list)
     result = process_expression(text, var_list)
 
-    if result.is_a? Integer
+    if result.is_a? Integer or result.is_a? Variable
         return result
     end
 

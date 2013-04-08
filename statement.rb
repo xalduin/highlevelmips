@@ -1,11 +1,9 @@
-VAR_TYPES = ['word', 'half', 'byte']
-
 #Matching for variable declaration
 # 1. identifier
 # 2. type
 # 3. [] if the type is an array (optional)
 
-S_VAR_DECL   = /^var \s+ ([a-zA-Z]\w*)+ \s* : \s* (\w+) (\[ \])? $/x
+S_VAR_DECL   = /^var \s+ ([a-zA-Z]\w*) \s* : \s* ([a-z]+) (\[ \])? $/x
 
 # Matching for const declaration
 # 1. identifier
@@ -30,9 +28,17 @@ S_SET_ARRAY = /([a-zA-Z]\w*) \s* \[ \s* (\d+) \s* \] \s* = \s* (.+)/x
 S_RETURN = /^return \s+ (.*)$/x
 
 # Matching for function call
-# 1. identifier
-# 2. all arguments as a single string (spaces included)
-S_FUNC_CALL = /^([a-zA-Z]\w*) \s* \( \s* ((\w+)? \s*(\,\s*(\w+))*) \s* \)$/x
+# 1. Variable to store result
+# 2. identifier
+# 3. all arguments as a single string (spaces included)
+S_FUNC_CALL = /^(?:([a-zA-Z]\w*) \s* = \s*)?
+    ([a-zA-Z]\w*)
+    \s*
+    \( \s* 
+          ((\w+)? \s*(\,\s*(\w+))*)
+    \s* 
+    \)
+    $/x
 
 # Matching for function declaration
 # 1. function identifier
@@ -67,3 +73,5 @@ B_ENDLOOP = /^\s*endloop\s*$/
 # Matchinf for exitwhen statement
 # 1. Expression to be evaluated
 B_EXITWHEN= /exitwhen \s+ (\S.+)/x
+
+VAR_REGEXP   = /^([a-zA-Z]\w*)$/

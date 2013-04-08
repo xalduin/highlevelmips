@@ -10,7 +10,7 @@ require_relative 'function.rb'
 def process_if(match, func)
 
     unless func.is_a? Function
-        raise "Internal: if: '#{func}' isn't a function"
+        raise "if statement must be used inside a function"
     end
 
     # Try to process the condition
@@ -24,11 +24,17 @@ def process_if(match, func)
 end
 
 def process_else(func)
+    raise "else statement must be used in a function" unless func.is_a? Function
+
     instruction = ElseInstruction.new(func)
     func.add_instruction(instruction)
 end
 
 def process_endif(func)
+    unless func.is_a? Function
+        raise "endif statement must be used in a function"
+    end
+
     instruction = EndifInstruction.new(func)
     func.add_instruction(instruction)
 end
@@ -43,10 +49,10 @@ class IfInstruction
         @@index
     end
     def self.num_stack
-        num_stack
+        @@num_stack
     end
     def self.else_hash
-        else_hash
+        @@else_hash
     end
 
     attr_reader :expr, :func, :num
@@ -63,7 +69,7 @@ class IfInstruction
 
     def render
         label = "#{@func.ident}_"
-        if @@else_hash.has_key @num
+        if @@else_hash.has_key? @num
             label += "else_#{@num}"
         else
             label += "endif_#{@num}"

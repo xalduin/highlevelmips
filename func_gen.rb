@@ -1,5 +1,5 @@
 require_relative 'instructions.rb'
-require_relative 'instruction_gen.rb'
+require_relative 'function.rb'
 
 # Int -> [String]
 # size: number of bytes to allocate, should be a minimum of 8
@@ -44,6 +44,19 @@ def generate_stack_allocate(size)
     return result
 end
 
+def generate_store_parmeters(arg_list)
+    result = [] 
+
+    arg_list.each_index do |index|
+        target_reg = RS_LOCAL + index.to_s
+        source_reg = RS_ARG + index.to_s
+
+        result<< generate_move(target_reg, source_reg)
+    end
+    
+    return result
+end
+
 # Generates code to restore return address, frame pointer, and stack pointer
 # Frame:
 # [ Return address ]
@@ -72,31 +85,47 @@ def generate_stack_deallocate(size)
     return result
 end
 
+def setup_variables(var_list)
+    vars = var_list.variables.values
+
+    vars.each_with_index do |var, index|
+        var.register = RS_LOCAL + index.to_s
+    end
+end
+
 # String * {} -> [String]
 # name: name of the function to generate
 # global_table: table of information from parsed program
 #
 # result: An array of assembly instructions
-def generate_func(name, global_table)
-    global_table[:current_func] = name
-    local_table = global_table[:func][name]
-    instructions = local_table[:instructions]
+def generate_func(func)
+    unless func.is_a? Function
+        raise "Internal: generate_func: func must be a Function"
+    end
+
+    func_name = func.ident.to_s
+    instructions = func.instr_list
 
     # Calculate stack size needed, variables + return address + frame pointer
-    var_count = local_table[:var_index]
+    var_count = func.var_list.size
     stack_size = (var_count + 2) * REGISTER_SIZE 
 
     # Generate function definition and stack allocation
     result = []
-    result<< generate_label("func_" + name)
+    result<< generate_label("func_" + func_name)
     result += generate_stack_allocate(stack_size)
+
+    # Store arguments (a registers) in local (s registers)
+    result += generate_store_parmeters(func.arg_list)
+
+    setup_variables(func.var_list)
 
     # Generate each instruction
     instructions.each do |instruction|
-        result += generate_instruction(instruction, global_table, local_table)
+        result += instruction.render
     end
 
-    result<< generate_label("func_" + name + "_done")
+    result<< generate_label("func_" + func_name + "_done")
     result += generate_stack_deallocate(stack_size)
 
     result<< generate_jr(R_RETURN_ADDRESS)
@@ -104,11 +133,10 @@ def generate_func(name, global_table)
     return result
 end
 
-def generate_program(global_table)
+def generate_program(func_list)
     result = []
-    global_table[:func].each_key do |func_name|
-        result += generate_func(func_name, global_table)
+    func_list.each do |func|
+        result += generate_func(func)
     end
-
     return result
 end

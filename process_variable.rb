@@ -14,7 +14,8 @@ require_relative 'instructions.rb'
 #   true on success
 #
 # Raises an exception on type error or variable re-declaration
-def process_var(match, var_list)
+def process_var(match, block)
+    var_list = block.var_list
     ident = match[1]
     type = match[2]
     is_array = (match[3] != nil)
@@ -27,8 +28,8 @@ def process_var(match, var_list)
         type = type + "_array"
     end
 
-    var = Variable.new(ident, type)
-    var_list.add(var)
+    var = Variable.new(type, ident)
+    block.add_variable(var)
 
     return true
 end
@@ -58,6 +59,8 @@ def process_set(match, function)
 
     if value.is_a? Integer
         instruction.value_type = :const
+    elsif value.is_a? Variable
+        instruction.value_type = :var
     else
         instruction.value_type = :expression
     end
@@ -77,12 +80,14 @@ class SetVariableInstruction
     end
 
     def render
-        var_register = var.num
+        var_register = RS_LOCAL + var.num.to_s
 
         if @value_type == :const
             return [generate_li(var_register, value)]
+        elsif @value_type == :var
+            return [generate_move(var_register, @value.register)]
         else
-            return generate_expression(var_register, func.var_list)
+            return generate_expression(var_register, @value, func.var_list)
         end
     end
 

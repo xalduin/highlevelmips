@@ -1,16 +1,25 @@
 module Type
 
-    BASE_TYPES = [:word, :half, :byte, :word_array, :half_array, :byte_array]
+    BASE_TYPES = {
+        :word => 4,
+        :half => 2,
+        :byte => 1,
+        :word_array => 4,
+        :half_array => 4,
+        :byte_array => 4
+    }
     BASE_CAST = {
         :word => [:half, :byte],
         :half => [:word, :byte],
-        :byte => [:word, :half]
+        :byte => [:word, :half],
+        :const => [:word, :half, :byte]
     }
 
     @@defined_types = {}
+    @@init = false
 
     class TypeInfo
-        attr_reader ident, size, cast_list
+        attr_reader :ident, :size, :cast_list
 
         def add_castable(ident)
             ident = ident.to_sym
@@ -22,7 +31,7 @@ module Type
         end
 
         def castable?(ident)
-            return cast_list.include? ident
+            return (@ident == ident) || cast_list.include?(ident)
         end
 
         def initialize(ident, size, cast_list: [])
@@ -81,7 +90,7 @@ module Type
     #   true  - type has been defined
     #   false - type has not been defined
     def Type.include?(type_sym)
-        return @@defined_types.has_key? type_sym
+        return @@defined_types.has_key? type_sym.to_sym
     end
 
     # Symbol * Symbol -> true/false/nil
@@ -105,8 +114,13 @@ module Type
 
     # Initializes the Type module
     def Type.init()
-        BASE_TYPES.each do |type|
-            add(type)
+        if @@init == true
+            return
+        end
+        @@init = true
+
+        BASE_TYPES.each_pair do |type, size|
+            add(type, size)
         end
         BASE_CAST.each_pair do |type, cast_list|
             cast_list.each do |cast_type|
@@ -117,3 +131,4 @@ module Type
     end
 end
 
+Type.init

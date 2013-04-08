@@ -4,20 +4,24 @@ class Variable
     attr_reader :type, :ident
 
     # Can be used in structs for offsets or for s register number
-    attr_accessor :num
+    attr_accessor :num, :register
 
     def initialize(typename, identity)
+        typename = typename.to_sym
         # Ensure that a valid type is being used
         unless Type.include?(typename)
             raise "Invalid type '#{typename}'"
         end
         @ident = identity.to_sym
         @type  = typename
+
+        @num = nil
+        @register = nil
     end
 end
 
 class VariableList
-    attr :variables
+    attr_reader :variables
 
     def initialize()
         @variables = {}
@@ -55,8 +59,18 @@ class VariableList
     def include?(ident)
         return @variables.has_key?(ident.to_sym)
     end
+    def has_ident?(ident)
+        return @variables.has_key?(ident.to_sym)
+    end
 
     def get(ident)
-        return @variables[ident]
+        return @variables[ident.to_sym]
+    end
+
+    def length
+        return @variables.length
+    end
+    def size
+        return @variables.size
     end
 end

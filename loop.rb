@@ -7,6 +7,10 @@ require_relative 'instruction_gen.rb'
 # Asserts that the loop is declared inside a function
 
 def process_loop(func)
+    unless func.is_a? Function
+        raise "loop statements must be used inside functions"
+    end
+
     instruction = LoopInstruction.new(func)
     func.add_instruction(instruction)
     return true
@@ -17,6 +21,10 @@ end
 # true on success, exception raised on failure
 
 def process_endloop(func)
+    unless func.is_a? Function
+        raise "endloop statements must be used inside functions"
+    end
+
     instruction = EndloopInstruction.new(func)
     func.add_instruction(instruction)
     return true
@@ -31,6 +39,10 @@ end
 # :index => loop index
 # :value => value
 def process_exitwhen(match, func)
+    unless func.is_a? Function
+        raise "exitwhen statements must be used inside functions"
+    end
+
     expression = match[1]
     value = process_condition(expression, func.var_list)
 
@@ -49,7 +61,7 @@ class LoopInstruction
         @@index
     end
     def self.num_stack
-        num_stack
+        @@num_stack
     end
 
     attr_reader :func, :num
@@ -95,7 +107,7 @@ class ExitwhenInstruction
     def initialize(expression, func)
         @expr = expression
         @func = func
-        @num = LoopInstruction.num_stack.pop
+        @num = LoopInstruction.num_stack[-1]
         raise "No matching loop for endloop" if @num == nil
     end
 

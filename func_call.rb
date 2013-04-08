@@ -1,39 +1,13 @@
 require_relative 'statement.rb'
 require_relative 'expression.rb'
 require_relative 'variable.rb'
+require_relative 'function.rb'
+require_relative 'process_variable.rb'
 
 FUNC_CALL_REGEXP = /\w+/
 
-TYPE_WORD = :word
-TYPE_HALF = :half
-TYPE_BYTE = :byte
-TYPE_CONST = :const
-TYPE_WORD_ARRAY = :word_array
-TYPE_HALF_ARRAY = :half_array
-TYPE_BYTE_ARRAY = :byte_array
-
-IMPLICIT_CAST_TABLE = {
-    TYPE_CONST => [:byte, :half, :word],
-    TYPE_BYTE  => [:half, :word],
-    TYPE_HALF  => [:word]
-}
-
-def valid_type_match(arg_type, param_type)
-    if arg_type == param_type
-        return true
-    end
-
-    cast_list = IMPLICIT_CAST_TABLE[arg_type.to_sym]
-    if cast_list == nil
-        return false
-    end
-
-    return cast_list.include?(param_type)
-end
-
-
-# String * [Empty] * [Hash] * Hash -> True/nil
-# Returns true on success, nil on failure
+# String * [Variable] * Function -> Array
+# Returns an array o
 #
 # Hash format:
 # :type => :const or :var
@@ -43,113 +17,145 @@ end
 #   if :var, then the variable index
 #
 # Result is stored in result_list
-def process_func_call_args(call_args, result_list, func_params, local_table)
-    if call_args == nil || call_args.empty?
-        return true
-    end
+def process_func_call_args(call_args, func_params, source_func)
+    result = []
 
-    unless result_list.empty?
-        puts "InternalError: result_list must be empty"
-        return nil
+    if call_args == nil || call_args.empty?
+        return result
     end
 
     index = 0
+    local_vars = source_func.var_list
     arg_matches = call_args.scan(FUNC_CALL_REGEXP)
-
 
     arg_matches.each do |arg_match|
         arg = arg_match
 
         # Lookup info on the function parameter's type
-        func_param = func_params[index]
-        if func_param == nil
-            puts "Too many arguments supplied to function call"
-            return nil
+        param = func_params[index]
+        if param == nil
+            raise "Too many arguments supplied to function call"
         end
-        param_type = func_param[:type].to_sym
 
-        entry = {}
         match = arg.match(CONST_REGEXP)
         if match
-            entry[:value] = arg
-            entry[:type]  = :const
+            result<< Integer(arg)
 
-            unless valid_type_match(:const, param_type)
-                puts "Cannont convert constant '#{arg}' to '#{param_type}'"
-                return nil
+            # Constants are treated as halfs (16-bits)
+            # For the purpose of being castable
+            unless Type.castable?(:half, param.type)
+                raise "Cannont convert constant '#{arg}' to '#{param.type}'"
             end
 
         else
-            var = lookup_var(arg, local_table)
-            if var == nil
-                puts "Unknown variable '#{arg}'"
-                return nil
+            var = local_vars.get(arg)
+            raise "Unknown variable '#{arg}'" if var == nil
+
+            unless Type.castable?(var.type, param.type)
+                raise "Cannot convert '#{arg}:#{var.type}' to #{param.type}"
             end
 
-            var_name = var[0]
-            var_type = var[1].to_sym
-
-            unless valid_type_match(var_type, param_type)
-                puts "Cannot convert '#{arg}:#{var_type}' to #{param_type}"
-                return nil
-            end
-
-            entry[:type] = :var
-            entry[:value] = var_name
+            result<< var
         end
 
-        result_list<< entry
         index += 1
     end
 
     if index < func_params.size
-        puts "Expected #{func_params.size} arguments, only #{index} supplied"
-        return nil
+        raise "Expected #{func_params.size} arguments, only #{index} supplied"
     end
 
-    return true 
+    return result
 end
 
-# String * MatchData * Hash * Hash -> True/nil
-# True on success, nil on failure
+# MatchData * Function * FunctionList -> true
+# True on success, exception thrown on failure
 #
-# Instruction added (format):
-# :type => :func_call
-# :ident => function being called
-# :args => list of arguments
-def process_func_call(line, match, global_table, local_table)
-    unless global_table[:current_func]
-        puts "Function calls must be made inside functions"
-        return nil
+# Adds a FunctionCallInstruction to the given function's instruction list
+# on success
+def process_func_call(match, func, func_list)
+    unless func_list.is_a? FunctionList
+        raise "Internal: func_list isn't a FunctionList"
+    end
+    unless func.is_a? Function
+        raise "Can only call functions inside other functions"
     end
 
-    if global_table[:func] == nil
-        puts "InternalError: No global table entry for functions"
-        return nil
+    var_name = match[1]
+    func_name = match[2]
+    call_args = match[3]
+
+    func_target = func_list.get_ident(func_name)
+
+    if func_target == nil
+        raise "Trying to call undeclared function '#{func_name}'"
     end
 
-    func_name = match[1]
-    call_args = match[2]
+    arg_list = process_func_call_args(call_args, func_target.arg_list, func)
+    instruction = FunctionCallInstruction.new(func, func_target, arg_list)
+    func.add_instruction(instruction)
 
-    unless global_table[:func].has_key?(func_name)
-        puts "Trying to call undeclared function #{func_name}"
-        return nil
+    # Check if it's requested to save return value
+    if var_name != nil
+
+        # Check to make sure that the variable is defined
+        var = func.var_list.get(var_name)
+        if var == nil 
+            raise "Unknown variable '#{var_name}'"
+        end
+
+        return_type = func_target.return_type
+        # Type check return type with variable type
+        unless Type.castable?(return_type, var.type)
+            raise "Cannot cast return type #{return_type} to #{var.type}"
+        end
+
+        instruction.var_result = var
     end
-
-    arg_list = []
-    func_args = global_table[:func_args][func_name]
-
-    unless process_func_call_args(call_args, arg_list, func_args, local_table)
-        return nil
-    end
-
-    # Create the instruction and add it to the list
-    instruction = {:type  => :func_call,
-                   :ident => func_name,
-                   :args  => arg_list
-    }
-    instruction_list = local_table[:instructions]
-    instruction_list<< instruction
 
     return true
+end
+
+class FunctionCallInstruction
+    attr :func, :func_target, :args
+    attr_writer :var_result
+
+    # Params:
+    #   func: Function - the function callee
+    #   func_target: Function - the function called
+    #   args: [Variable | Integer] - in-order list of function arguments
+    def initialize(func, func_target, args)
+        @func = func
+        @func_target = func_target
+        @args = args
+        @var_result = nil
+    end
+
+    def render
+        result = []
+        index = 0
+        @args.each do |var|
+            arg_register = RS_ARG + index.to_s
+
+            # Constants loaded into arg register through load immediate
+            if var.is_a? Integer
+                result<< generate_li(arg_register, var)
+
+            # Local variables are in registers, move instruction used
+            else
+                var_register = RS_LOCAL + var.num.to_s
+                result<< generate_move(arg_register, var_register)
+            end
+            index += 1
+        end
+
+        label = "func_#{func_target.ident}"
+        result<< generate_jal(label)
+
+        if @var_result != nil
+            result<< generate_move(@var_result.register, RS_RETURN + "0")
+        end
+
+        return result
+    end
 end

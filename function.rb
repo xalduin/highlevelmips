@@ -44,24 +44,31 @@ class Function
 end
 
 class FunctionList
-    attr func_hah
+    attr :func_hash
 
     def initialize
         @func_hash = {}
     end
 
     def add(func)
-        return false if @func_list.has_key? func
-        @func_list[func.ident] = func
+        return false if @func_hash.has_key? func
+        @func_hash[func.ident] = func
         return true
     end
 
     def include?(func)
-        return @func_list.has_key? func.ident
+        return @func_hash.has_key? func.ident
+    end
+    def has_ident?(func_ident)
+        return @func_hash.has_key? func_ident.to_sym
+    end
+
+    def get_ident(func_ident)
+        return @func_hash[func_ident.to_sym]
     end
 
     def each
-        func_hash.each_pair do |key, value|
+        @func_hash.each_value do |value|
             yield value
         end
     end
