@@ -81,13 +81,3 @@ B_ENDLOOP = /^\s*endloop\s*$/
 B_EXITWHEN= /exitwhen \s+ (\S.+)/x
 
 VAR_REGEXP   = /^([a-zA-Z]\w*)$/
-ARRAY_REGEXP = /^
-    ([a-zA-Z]\w*) \s*
-    (:?\[ \s*
-        (
-            (:?\d+)
-            | 
-            (:?[a-zA-Z]\w*)
-        )
-    \s*
-    \])$/x
