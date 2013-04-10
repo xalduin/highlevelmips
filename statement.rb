@@ -18,7 +18,11 @@ S_CONST_DECL = /^const \s+ ([a-zA-Z]\w*)+ \s* : \s* (\w+) \s* = \s* (.+)/x
 # 2. expression value of right hand side
 S_SET_VAR   = /([a-zA-Z]\w*)
     \s*
-    (:?\[ (\d+) \])?
+    (:?
+        \[ \s*
+            (.+)
+        \s* \]
+    )?
     \s* = \s* 
     (.+)
     /x

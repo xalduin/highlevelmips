@@ -34,9 +34,6 @@ def process_var(match, block)
     return true
 end
 
-def process_array_var(match, function)
-end
-
 # Adds an instruction for setting the value of a variable
 # Checks to ensure that the variable was previously defined and that it has
 # a proper expression
@@ -59,11 +56,8 @@ def process_set(match, function)
         raise "Cannot use array index on non-array variable"
     end
 
-    value = value.strip!
-    match = value.match(ARRAY_REGEXP)
-    if match
-    end
-        
+    index_expression = parse_expression(array_index, true)
+    value_expression = parse_expression(value, true)
 
     value = process_noncondition_expression(value, function.var_list)
     raise "Unable to parse expression '#{value}'" if value == nil

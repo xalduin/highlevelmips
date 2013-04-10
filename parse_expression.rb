@@ -52,7 +52,7 @@ def parse_expression(text, consume_all=false)
         raise "Expected expression but found empty string"
     end
 
-    until text.empty?
+    until text == nil or text.empty?
         op = text[0]
 
         # Reached the end of known parsing, return
@@ -73,9 +73,12 @@ def parse_expression(text, consume_all=false)
         text.strip!
     end
 
-    if result.size == 1
+    if result.empty?
+        raise "Failed to parse expression"
+    elsif result.size == 1
         return result[0]
     end
+
     return result
 end
 
@@ -161,14 +164,14 @@ def parse_factor(text)
         match = text.slice!(ARRAY_REGEXP)
         unless match == nil or match.empty?
             # The array index is $1
-            return [ident, :array_access, parse_expression($1)]
+            return [ident.to_sym, :array_access, parse_expression($1)]
         end
 
         text.lstrip!
         match = text.slice!(FUNC_REGEXP)
         unless match == nil or match.empty?
             args = $1
-            func = [ident, :call]
+            func = [ident.to_sym, :call]
 
             if args == nil or args.empty?
                 return func
@@ -191,7 +194,7 @@ def parse_factor(text)
             return func
         end
 
-        return ident
+        return ident.to_sym
     else
         match = text.slice!(NUM_REGEXP)
         if match == nil or match.empty?
