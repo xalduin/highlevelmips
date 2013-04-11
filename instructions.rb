@@ -105,13 +105,29 @@ def generate_div(dest, left, right)
     return instruction_string(I_DIV, "#{dest}, #{left}, #{right}")
 end
 
-def generate_sw(value, address, offset)
+def generate_sb(value, offset, address)
+    return instruction_string(I_SB, "#{value}, #{offset}(#{address})")
+end
+def generate_sh(value, offset, address)
+    return instruction_string(I_SH, "#{value}, #{offset}(#{address})")
+end
+def generate_sw(value, offset, address)
     #TODO: Assert value is a register, address is register, offset is 16bit
     
     return instruction_string(I_SW, "#{value}, #{offset}(#{address})")
 end
 
-def generate_lw(dest, address, offset)
+def generate_lb(dest, offset, address)
+    #TODO: Assert dest is register, address is register, offset 16bit
+
+    return instruction_string(I_LB, "#{dest}, #{offset}(#{address})")
+end
+def generate_lh(dest, offset, address)
+    #TODO: Assert dest is register, address is register, offset 16bit
+
+    return instruction_string(I_LH, "#{dest}, #{offset}(#{address})")
+end
+def generate_lw(dest, offset, address)
     #TODO: Assert dest is register, address is register, offset 16bit
 
     return instruction_string(I_LW, "#{dest}, #{offset}(#{address})")

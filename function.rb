@@ -1,11 +1,15 @@
 require_relative 'type.rb'
+require_relative 'identifier.rb'
 require_relative 'variable.rb'
 
-class Function
-    attr_reader :ident, :return_type, :arg_list, :var_list, :instr_list
+class Function < Identifier
+    attr_reader :return_type, :arg_list, :var_list, :instr_list
+    attr :ident_list
     attr :local_register_stack, :temp_register_stack
 
-    def initialize(ident, return_type, arg_list)
+    def initialize(ident, return_type, arg_list, func_list)
+        super(ident.to_sym, return_type.to_sym)
+
         # Type checking
         unless arg_list.is_a? Array
             raise "arg_list must be an Array"
@@ -25,6 +29,12 @@ class Function
         @local_register_stack = (0..8).to_a.reverse!
         @temp_register_stack  = (0..8).to_a.reverse!
 
+        @ident_list = IdentifierList.new
+        func_list.each do |func|
+            @ident_list.add_ident(func)
+        end
+        @ident_list.add_ident(self)
+
         arg_list.each do |var|
             add_variable(var)
         end
@@ -36,15 +46,20 @@ class Function
 
         var.num = register
         @var_list.add(var)
+        @ident_list.add_ident(var)
     end
 
     def add_instruction(instr)
         @instr_list.push instr
     end
+
+    def ident_list
+        return @ident_list
+    end
 end
 
 class FunctionList
-    attr :func_hash
+    attr_reader :func_hash
 
     def initialize
         @func_hash = {}

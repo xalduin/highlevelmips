@@ -32,7 +32,7 @@ def process_line(line, blocks, func_list)
     match = line.match(B_FUNC_DECL)
     if match
         func = process_func_decl(match, func_list, block)
-        blocks.push func
+        blocks.push(func)
         return true
     end
 
@@ -111,6 +111,12 @@ def parse_input(input_file)
             puts "#{e.message}" 
             puts "Line #{line_number}: #{line}"
             puts "Failed to parse file"
+            return nil
+        rescue => e
+            puts "#{e.message}"
+            puts "Line #{line_number}: #{line}"
+            print e.backtrace.take(5).join("\n")
+            puts ""
             return nil
         end
 

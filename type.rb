@@ -31,7 +31,8 @@ module Type
         end
 
         def castable?(ident)
-            return (@ident == ident) || cast_list.include?(ident)
+            return (@ident == ident) || cast_list.include?(ident) ||
+                ident == :const
         end
 
         def initialize(ident, size, cast_list: [])
@@ -106,6 +107,9 @@ module Type
         type_info = @@defined_types[type1_sym]
 
         if type_info == nil
+            if type1_sym == :const
+                return BASE_CAST[:const].include? type2_sym
+            end
             return nil
         end
 

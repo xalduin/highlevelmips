@@ -1,18 +1,23 @@
 require_relative 'type.rb'
+require_relative 'Identifier.rb'
 
-class Variable
-    attr_reader :type, :ident, :array
+class Variable < Identifier
+    attr_reader :array
 
     # Can be used in structs for offsets or for s register number
     attr_accessor :num, :register
 
-    def initialize(typename, identity,is_array)
+    def initialize(typename, identifier, is_array)
+        identifier = identifier.to_sym
         typename = typename.to_sym
+        super(identifier, typename)
+
         # Ensure that a valid type is being used
         unless Type.include?(typename)
             raise "Invalid type '#{typename}'"
         end
-        @ident = identity.to_sym
+
+        @ident = identifier
         @type  = typename
         @array = is_array
 

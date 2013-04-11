@@ -2,7 +2,11 @@ require_relative 'statement.rb'
 require_relative 'expression.rb'
 require_relative 'variable.rb'
 
-FUNC_ARGS_REGEXP = /([a-zA-Z]\w*)\s*:\s*([a-zA-Z]+)/
+# Regexp for a single function argument
+# 1. Identifier
+# 2. Type
+# 3. nil if value isn't an array
+FUNC_ARGS_REGEXP = /([a-zA-Z]\w*)\s*:\s*([a-zA-Z]+)(\[\])?/
 
 # String * [] -> true/nil
 # Returns true on success, nil on failure
@@ -16,21 +20,22 @@ def process_args(args, arg_list)
     end
 
     unless arg_list.empty?
-        raise "Internal: Arg list must be empty"
+        raise ArgumentError, "Internal: Arg list must be empty"
     end
 
     # Array of matches
     arg_defs = args.scan(FUNC_ARGS_REGEXP)
 
     arg_defs.each do |arg_match|
-        name = arg_match[0]
-        type = arg_match[1]
+        name     = arg_match[0]
+        type     = arg_match[1]
+        is_array = arg_match[2] != nil
 
         unless Type.include?(type)
             raise "Invalid argument type '#{type}'"
         end
 
-        var = Variable.new(type, name)
+        var = Variable.new(type, name, is_array)
         arg_list<< var
     end
 
@@ -69,7 +74,7 @@ def process_func_decl(match, func_list, block)
     arg_list = []
     process_args(args, arg_list)
 
-    func = Function.new(name, result_type, arg_list)
+    func = Function.new(name, result_type, arg_list, func_list)
     func_list.add(func)
 
     return func
@@ -85,8 +90,6 @@ def process_endfunc(func)
     return true
 end
 
-NUM_REGEXP = /^(\d)+$/
-
 def process_return(match, func)
     instruction = ReturnInstruction.new(func)
     func.add_instruction(instruction)
@@ -97,35 +100,22 @@ def process_return(match, func)
             raise "Expected a value to be given for return statement"
         end
         return true
-    end
 
-    # Check to see if the return value is a numerical constant
-    value = match[1].strip
-    match = value.match(NUM_REGEXP)
-    if match
-        instruction.value = Integer(match[1])
-        return true
-    end
+    # Return value given
+    else
+        if func.return_type == nil
+            raise "Return value given when none expected"
+        end
+        return_expression = process_expression(match[1], func.ident_list)
 
-    # Check to see if the return value is a variable
-    var_list = func.var_list
-    match = value.match(VAR_REGEXP)
-    if match
-        var_ident = match[1]
-        var = var_list.get(var_ident)
-
-        if var == nil
-            raise "Unknown variable '#{var_ident}'"
+        unless Type.castable?(return_expression.type, func.type)
+            raise "Return type doesn't match function type:\n" +
+                  "'#{return_expression.type}' -> '#{func.type}'"
         end
 
-        instruction.value = var
+        instruction.value = return_expression
         return true
     end
-
-    # Assume that expression parsing is necessary
-    result = process_noncondition_expression(value, var_list)
-    instruction.value = result
-    return true
 end
 
 class ReturnInstruction
@@ -143,14 +133,7 @@ class ReturnInstruction
 
         if value != nil
             register = RS_RETURN + '0'
-
-            if @value.is_a? Integer
-                result<< generate_li(register, @value)
-            elsif @value.is_a? Variable
-                result<< generate_move(register, @value.register)
-            else
-                result = generate_expression(register, @value, @func.var_list)
-            end
+            result += generate_expression(@value, register, false)
         end
 
         result<< generate_j(label)

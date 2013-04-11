@@ -1,6 +1,7 @@
 require_relative 'statement.rb'
 require_relative 'variable.rb'
-require_relative 'expression.rb'
+require_relative 'process_expression.rb'
+require_relative 'render_expression.rb'
 require_relative 'function.rb'
 require_relative 'instructions.rb'
 
@@ -24,10 +25,6 @@ def process_var(match, block)
         raise "Redeclared variable '#{ident}'"
     end
 
-    if is_array
-        type = type + "_array"
-    end
-
     var = Variable.new(type, ident, is_array)
     block.add_variable(var)
 
@@ -39,9 +36,10 @@ end
 # a proper expression
 def process_set(match, function)
     name = match[1]
-    array_index = match[2]
-    value = match[3]
+    array_index = match[3]
+    value = match[4]
 
+    # Error checking:
     unless function.is_a? Function
         raise "Can only set variables inside functions"
     end
@@ -56,20 +54,15 @@ def process_set(match, function)
         raise "Cannot use array index on non-array variable"
     end
 
-    index_expression = parse_expression(array_index, true)
-    value_expression = parse_expression(value, true)
+    # Parse value and create instruction
+    ident_list = function.ident_list
+    value_expression = process_expression(value, ident_list)
+    instruction = SetVariableInstruction.new(var, value_expression, function)
 
-    value = process_noncondition_expression(value, function.var_list)
-    raise "Unable to parse expression '#{value}'" if value == nil
-
-    instruction = SetVariableInstruction.new(var, nil, value, function)
-
-    if value.is_a? Integer
-        instruction.value_type = :const
-    elsif value.is_a? Variable
-        instruction.value_type = :var
-    else
-        instruction.value_type = :expression
+    # The variable is being used as an array, add array index to instruction
+    if array_index
+        index_expression = process_expression(array_index, ident_list)
+        instruction.array_index = index_expression
     end
 
     function.add_instruction(instruction)
@@ -77,25 +70,52 @@ def process_set(match, function)
 end
 
 class SetVariableInstruction
-    attr_accessor :var, :value_type, :value, :func
+    attr_accessor :var, :array_index, :value, :func
 
-    def initialize(var, value_type, value, func)
+    def initialize(var, value, func, array_index=nil)
         @var = var
-        @value_type = value_type
         @value = value
         @func = func
+        @array_index = array_index
     end
 
     def render
-        var_register = RS_LOCAL + var.num.to_s
+        var_reg = @var.register
+        temp_reg = RS_TEMP + "0"
 
-        if @value_type == :const
-            return [generate_li(var_register, value)]
-        elsif @value_type == :var
-            return [generate_move(var_register, @value.register)]
-        else
-            return generate_expression(var_register, @value, func.var_list)
+        result = []
+        if array_index
+            index_reg = RS_TEMP + "1"
+
+            # Direct address given
+            if @array_index.type.to_s.end_with? "_address"
+                result += generate_expression(@array_index, index_reg, true)
+
+            # Integer address given, compute address
+            else
+                result += generate_expression(@array_index, index_reg, false)
+                size = Type.size(@var.type)
+                if size > 1
+                    result<< generate_mul(index_reg, index_reg, size)
+                end
+                result<< generate_add(index_reg, index_reg, var_reg)
+            end
+
+            # Generate different store directions based on array type
+            case @var.type
+                when :byte
+                    result<< generate_sb(temp_reg, 0, index_reg)
+                when :half
+                    result<< generate_sh(temp_reg, 0, index_reg)
+                when :word
+                    result<< generate_sw(temp_reg, 0, index_reg)
+            end
+            return result
         end
+
+        # Non-array values are a cakewalk
+        # Just store the expression in the variable register
+        return generate_expression(@value, var_reg, false)
     end
 
 end

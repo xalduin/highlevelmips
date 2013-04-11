@@ -1,6 +1,6 @@
 require_relative 'expression.rb'
+require_relative 'render_expression.rb'
 require_relative 'function.rb'
-require_relative 'instruction_gen.rb'
 
 # String * MatchData * {} * {} -> true/nil
 # Process a loop declaration
@@ -44,7 +44,7 @@ def process_exitwhen(match, func)
     end
 
     expression = match[1]
-    value = process_condition(expression, func.var_list)
+    value = process_condition(expression, func.ident_list)
 
     instruction = ExitwhenInstruction.new(value, func)
     func.add_instruction(instruction)
@@ -113,6 +113,6 @@ class ExitwhenInstruction
 
     def render
         end_label = "#{@func.ident}_endloop_#{@num}"
-        return generate_branch(@expr, end_label, @func.var_list)
+        return generate_condition(@expr, end_label)
     end
 end

@@ -1,6 +1,32 @@
 require_relative 'type.rb'
 require_relative 'expression.rb'
 
+def generate_function_expression(expression, dest, overwrite=false)
+    unless expression.is_a? FunctionExpression
+        raise ArgumentError, "Expression must be a FunctionExpression"
+    end
+    result = []
+    func_label = "func_" + expression.value.ident.to_s
+
+    # Fill arg registers
+    expression.args.each_with_index do |arg, index|
+        result += generate_expression(arg, RS_ARG + index.to_s, false)
+    end
+
+    result<< generate_jal(func_label)
+
+    if expression.type != nil
+        return_reg = RS_RETURN + "0"
+        if overwrite
+            dest.replace(return_reg)
+        else
+            result<< generate_move(dest, return_reg)
+        end
+    end
+
+    return result
+end
+
 # VariableExpression * String * Bool -> [String]
 def generate_variable_expression(expression, dest, overwrite=false)
 
@@ -17,7 +43,7 @@ def generate_variable_expression(expression, dest, overwrite=false)
             return [generate_move(dest, reg)]
         else
             # Overwritting allowed, no move instruction necessary
-            dest.replace(reg)
+            dest.replace(var_reg)
             return []
         end
     end
@@ -62,6 +88,9 @@ def generate_operator_expression(expression, dest, overwrite=false)
     op = expression.op
 
     # left or right, but not both are constant
+    unless left_const
+        result += generate_expression(left, left_reg, true)
+    end
     if left_const
         right_const = true
         if OP_COMMUTATIVE_TABLE[op] == true
@@ -131,7 +160,10 @@ def generate_expression(expression, dest, overwrite=false)
             return [generate_li(dest, value)]
 
         when VariableExpression
-            return generate_variable(expression, dest, overwrite)
+            return generate_variable_expression(expression, dest, overwrite)
+
+        when FunctionExpression
+            return generate_function_expression(expression, dest, overwrite)
 
         when OperatorExpression
             return generate_operator_expression(expression, dest, overwrite)

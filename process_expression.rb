@@ -37,6 +37,7 @@ end
 # FunctionExpression * IdentifierList -> nil
 def check_func_call(expression, ident_list)
     func = expression.value
+    args = expression.args
 
     param_list = func.arg_list
     if args.size != param_list.size
@@ -46,11 +47,7 @@ def check_func_call(expression, ident_list)
     args.each_with_index do |arg, index|
         param = param_list[index]
 
-        arg_type = arg.type
-        if arg.type == :const
-            arg_type = :half
-        end
-        unless Type.castable?(arg_type, param.arg_type)
+        unless Type.castable?(arg.type, param.type)
             raise "Arg #'#{index}': #{arg_type} cant convert to '#{param.type}'"
         end
     end
@@ -115,8 +112,10 @@ def check_expression(expression, ident_list)
                 expression.type = var.type
 
             # Array variable used without index = pointer mode
-            else var.is_array? and expression.array_index == nil
+            elsif var.is_array? and expression.array_index == nil
                 expression.type = (var.type.to_s + "_address").to_sym
+            else
+                expression.type = var.type
             end
             expression.value = var
 
@@ -136,7 +135,7 @@ def check_expression(expression, ident_list)
     
             # Check each argument (updates their type values)
             expression.args.each do |arg|
-                check_expression(arg)
+                check_expression(arg, ident_list)
             end
 
             check_func_call(expression, ident_list)
@@ -149,12 +148,14 @@ def check_expression(expression, ident_list)
         # Finally, change the type of the current expression to that of the left
         # one
         when OperatorExpression 
-            check_expression(left)
-            check_expression(right)
+            left = expression.left
+            right = expression.right
+            check_expression(left, ident_list)
+            check_expression(right, ident_list)
 
             # Special case for addresses
             op = expression.op
-            if left.type.to_s.ends_with?("_address")
+            if left.type.to_s.end_with?("_address")
 
                 # Cannot use multiplication or division with addresses on
                 # either side
@@ -173,6 +174,7 @@ def check_expression(expression, ident_list)
                 end
 
                 unless Type.castable?(right.type, :word)
+                    puts "#{right.type}"
                     raise "Can only add/subtract integer values from addresses"
                 end
 

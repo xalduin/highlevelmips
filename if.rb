@@ -1,4 +1,5 @@
 require_relative 'expression.rb'
+require_relative 'render_expression.rb'
 require_relative 'statement.rb'
 require_relative 'function.rb'
 
@@ -15,7 +16,7 @@ def process_if(match, func)
 
     # Try to process the condition
     expression = match[1]
-    value = process_condition(expression, func.var_list)
+    value = process_condition(expression, func.ident_list)
 
     instruction = IfInstruction.new(value, func)
     func.add_instruction(instruction)
@@ -75,7 +76,7 @@ class IfInstruction
             label += "endif_#{@num}"
         end
 
-        return generate_branch_negation(@expr, label, @func.var_list)
+        return generate_condition_negate(@expr, label)
     end
 end
 

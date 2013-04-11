@@ -81,81 +81,30 @@ def process_func_call(match, func, func_list)
         raise "Can only call functions inside other functions"
     end
 
-    var_name = match[1]
-    func_name = match[2]
-    call_args = match[3]
-
-    func_target = func_list.get_ident(func_name)
-
-    if func_target == nil
-        raise "Trying to call undeclared function '#{func_name}'"
+    expr = process_expression(match[0], func.ident_list)
+    unless expression.is_a?(FunctionExpression) or expression.type == nil
+        raise "Invalid function call expression?"
     end
 
-    arg_list = process_func_call_args(call_args, func_target.arg_list, func)
-    instruction = FunctionCallInstruction.new(func, func_target, arg_list)
+    instruction = FunctionCallInstruction.new(func, expr)
     func.add_instruction(instruction)
-
-    # Check if it's requested to save return value
-    if var_name != nil
-
-        # Check to make sure that the variable is defined
-        var = func.var_list.get(var_name)
-        if var == nil 
-            raise "Unknown variable '#{var_name}'"
-        end
-
-        return_type = func_target.return_type
-        # Type check return type with variable type
-        unless Type.castable?(return_type, var.type)
-            raise "Cannot cast return type #{return_type} to #{var.type}"
-        end
-
-        instruction.var_result = var
-    end
 
     return true
 end
 
 class FunctionCallInstruction
-    attr :func, :func_target, :args
-    attr_writer :var_result
+    attr :func, :expr
 
     # Params:
     #   func: Function - the function callee
     #   func_target: Function - the function called
     #   args: [Variable | Integer] - in-order list of function arguments
-    def initialize(func, func_target, args)
+    def initialize(func, expr)
         @func = func
-        @func_target = func_target
-        @args = args
-        @var_result = nil
+        @expr = expr
     end
 
     def render
-        result = []
-        index = 0
-        @args.each do |var|
-            arg_register = RS_ARG + index.to_s
-
-            # Constants loaded into arg register through load immediate
-            if var.is_a? Integer
-                result<< generate_li(arg_register, var)
-
-            # Local variables are in registers, move instruction used
-            else
-                var_register = RS_LOCAL + var.num.to_s
-                result<< generate_move(arg_register, var_register)
-            end
-            index += 1
-        end
-
-        label = "func_#{func_target.ident}"
-        result<< generate_jal(label)
-
-        if @var_result != nil
-            result<< generate_move(@var_result.register, RS_RETURN + "0")
-        end
-
-        return result
+        return generate_function_expression(@expr, @func.ident, false)
     end
 end

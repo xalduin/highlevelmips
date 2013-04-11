@@ -107,6 +107,7 @@ class FunctionExpression < Expression
     def initialize(ident, args)
         super()
         @value = ident.to_sym
+        @type = nil
         @args = args
     end
 end

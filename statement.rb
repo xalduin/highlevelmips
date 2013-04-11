@@ -14,18 +14,19 @@ S_CONST_DECL = /^const \s+ ([a-zA-Z]\w*)+ \s* : \s* (\w+) \s* = \s* (.+)/x
 
 # Matching for set variable to value
 # 1. identifier
-# 2. Array index (if any)
-# 2. expression value of right hand side
+# 2. ignore
+# 3. Array index (if any)
+# 4. expression value of right hand side
 S_SET_VAR   = /([a-zA-Z]\w*)
     \s*
-    (:?
+    (
         \[ \s*
-            (.+)
+            (:?.+)
         \s* \]
     )?
     \s* = \s* 
     (.+)
-    /x
+    $/x
 
 # Matching for set variable array to value
 # 1. identifier
@@ -41,7 +42,7 @@ S_RETURN = /^return \s+ (.*)$/x
 # 1. Variable to store result
 # 2. identifier
 # 3. all arguments as a single string (spaces included)
-S_FUNC_CALL = /^(?:([a-zA-Z]\w*) \s* = \s*)?
+S_FUNC_CALL = /^
     ([a-zA-Z]\w*)
     \s*
     \( \s* 
