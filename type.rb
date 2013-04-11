@@ -112,6 +112,22 @@ module Type
         return type_info.castable? type2_sym
     end
 
+    # Symbol -> Integer/nil
+    # Param:
+    #   type_sym - symbol referring to type
+    # Returns:
+    #   size of the specified type or
+    #   nil if type isn't defined
+    def Type.size(type_sym)
+        type_info = @@defined_types[type_sym.to_sym]
+
+        if type_info == nil
+            return nil
+        end
+
+        return type_info.size
+    end
+
     # Initializes the Type module
     def Type.init()
         if @@init == true

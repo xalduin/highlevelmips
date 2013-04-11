@@ -37,7 +37,7 @@ def parse_condition(text)
 end
 
 
-# String -> [left, :op, right] or value
+# String -> Expression
 # Directly modifies input string by deleting characters
 #
 # Param:
@@ -75,6 +75,7 @@ def parse_expression(text, consume_all=false)
     return ArithmeticExpression.new(result, op, right)
 end
 
+# String -> Expression
 def parse_term(text)
     result = parse_factor(text)
 
@@ -122,6 +123,8 @@ FUNC_REGEXP = /^\( \s* (.*) \s* \)/x
 #   numbers
 #   identifiers (just an identifier = variable)
 #   an expression inside parenthesis
+
+# String -> Expression
 def parse_factor(text)
     text.lstrip!
 

@@ -85,10 +85,38 @@ def check_expression(expression, ident_list)
                 raise "Unknown variable '#{expression.value}'"
             end
 
-            if var.is_array? and expression.array_index == nil
-                expression.type = (var.type.to_s + "_array").to_sym
-            else
+            unless var.is_array? or expression.array_index == nil
+                raise "Cannot use array index with non-array variable " +
+                    "'#{expression.value}'"
+            end
+
+            # Special handling for arrays
+            if var.is_array? and expression.array_index != nil
+                check_expression(expression.array_index)
+                index_type = expression.array_index.type.to_s
+
+                # Using a pointer instead of integer for array index
+                if index_type.ends_with?("_address")
+                    index_type.strip!("_address")
+
+                    # When using a memory address var, types must match
+                    unless index_type.castable?(var.type)
+                        raise "Address type must match variable type:" +
+                            "address:'#{index_type}' var:'#{var.type}'"
+                    end
+                else
+                    # Non-address array index must be converted to word
+                    unless Type.castable?(index_type, :word)
+                        raise "Array index error: Cannot convert " +
+                            "'#{index_type}' to word"
+                    end
+                end
+
                 expression.type = var.type
+
+            # Array variable used without index = pointer mode
+            else var.is_array? and expression.array_index == nil
+                expression.type = (var.type.to_s + "_address").to_sym
             end
             expression.value = var
 
@@ -104,6 +132,7 @@ def check_expression(expression, ident_list)
             end
 
             expression.value = func
+            expression.type = func.return_type
     
             # Check each argument (updates their type values)
             expression.args.each do |arg|
@@ -123,8 +152,38 @@ def check_expression(expression, ident_list)
             check_expression(left)
             check_expression(right)
 
-            unless Type.castable?(right.type, left.type)
-                raise "Cannot cast '#{right.type}' to '#{left.type}'"
+            # Special case for addresses
+            op = expression.op
+            if left.type.to_s.ends_with?("_address")
+
+                # Cannot use multiplication or division with addresses on
+                # either side
+                if op == :mul or op == :div
+                    raise "Cannot use * or / with address values"
+                end
+
+                # If a conditional operator is used, both sides must be
+                # addresses
+                if OP_CONDITION_LIST.include? op
+                    unless right.type.to_s.ends_with("_address")
+                        raise "Must use conditional operator with 2 addresses"
+                    end
+                    expression.type = :byte
+                    return
+                end
+
+                unless Type.castable?(right.type, :word)
+                    raise "Can only add/subtract integer values from addresses"
+                end
+
+                expression.type = left.type
+                return
+            end
+
+            # Much simpler without address things in the way
+            unless Type.castable?(right.type, left.type) ||
+                   Type.castable?(left.type, right.type)
+                raise "Cannot convert between '#{right.type}' + '#{left.type}'"
             end
             expression.type = left.type
 
