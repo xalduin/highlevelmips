@@ -4,7 +4,7 @@ CONDITION_OPS = ['==', '!=', '<', '<=', '>', '>=']
 EXPRESSION_OPS = ['+', '-']
 TERM_OPS = ['*', '/']
 
-# String -> [left, :op, right]
+# String -> ConditionExpression
 #
 # Param:
 #   text:String - input text, will be modified
@@ -15,21 +15,25 @@ TERM_OPS = ['*', '/']
 #   op:Symbol - the conditional operation being performed
 
 def parse_condition(text)
-    result = []
-
-    result<< parse_expression(text)
+    left = parse_expression(text)
 
     text.lstrip!
     op = text[0..1]
     unless CONDITION_OPS.include? op
-        raise "Unknown conditional operator '#{op}'"
+        op = text[0]
+        unless OP_CONDITION_LIST.include? op
+            raise "Unknown conditional operator '#{op}'"
+        else
+            text.slice!(0)
+        end
+    else
+        text.slice!(0..1)
     end
-    text.slice!(0..1)
-    result<< OP_TABLE[op]
 
-    result<< parse_expression(text)
+    op = OP_TABLE[op]
+    right = parse_expression(text)
 
-    return result
+    return ConditionExpression.new(left, op, right)
 end
 
 
@@ -43,72 +47,53 @@ end
 #   value:Factor look a
 # expresssion = term [{+, -} term]*
 def parse_expression(text, consume_all=false)
-    result = []
-
-    result<< parse_term(text)
+    result = parse_term(text)
 
     text.strip!
     if text == nil
         raise "Expected expression but found empty string"
     end
 
-    until text == nil or text.empty?
-        op = text[0]
+    if text.empty?
+        return result
+    end
 
-        # Reached the end of known parsing, return
-        unless EXPRESSION_OPS.include?(op)
-            if consume_all
-                raise "Unrecognized char '#{op}' in expression"
-            end
-
-            if result.size == 1
-                return result[0]
-            end
-            return result
+    # Reached the end of known parsing, return
+    op = text[0]
+    unless EXPRESSION_OPS.include?(op)
+        if consume_all
+            raise "Unrecognized char '#{op}' in expression"
         end
 
-        text.slice!(0)
-        result<< OP_TABLE[op]
-        result<< parse_expression(text, false)
-        text.strip!
+        return result
     end
+    text.slice!(0)
 
-    if result.empty?
-        raise "Failed to parse expression"
-    elsif result.size == 1
-        return result[0]
-    end
+    op = OP_TABLE[op]
+    right = parse_expression(text, false)
 
-    return result
+    return ArithmeticExpression.new(result, op, right)
 end
 
 def parse_term(text)
-    result = []
-
-    result<< parse_factor(text)
+    result = parse_factor(text)
 
     text.lstrip!
-    until text.empty?
-        op = text[0]
-
-        # If it's not a term operator (* or /), then we're done here
-        unless TERM_OPS.include?(op)
-            if result.size == 1
-                return result[0]
-            end
-            return result
-        end
-        text.slice!(0)
-
-        result<< OP_TABLE[op]
-        result<< parse_term(text)
-        text.lstrip!
+    if text.empty?
+        return result
     end
 
-    if result.size == 1
-        return result[0]
+    # If it's not a term operator (* or /), then we're done here
+    op = text[0]
+    unless TERM_OPS.include?(op)
+        return result
     end
-    return result
+    text.slice!(0)
+
+    op = OP_TABLE[op]
+    right = parse_term(text)
+
+    return ArithmeticExpression.new(result, op, right)
 end
 
 # Numbers, includes hex, binary, octal
@@ -164,26 +149,29 @@ def parse_factor(text)
         match = text.slice!(ARRAY_REGEXP)
         unless match == nil or match.empty?
             # The array index is $1
-            return [ident.to_sym, :array_access, parse_expression($1)]
+            return VariableExpression.new(ident, parse_expression($1))
         end
 
         text.lstrip!
         match = text.slice!(FUNC_REGEXP)
         unless match == nil or match.empty?
+            func = FunctionExpression.new(ident, [])
             args = $1
-            func = [ident.to_sym, :call]
 
             if args == nil or args.empty?
                 return func
             end
 
             expression = parse_expression(args)
-            func<< expression
+            func.args<< expression
+
+            # Check for additional arguments, comma separated
             char = args[0]
             while char == ','
                 args.slice!(0)
                 expression = parse_expression(args)
-                func<< expression
+
+                func.args<< expression
                 char = args[0]
             end
 
@@ -194,7 +182,7 @@ def parse_factor(text)
             return func
         end
 
-        return ident.to_sym
+        return VariableExpression.new(ident, nil)
     else
         match = text.slice!(NUM_REGEXP)
         if match == nil or match.empty?
@@ -202,6 +190,6 @@ def parse_factor(text)
             raise "Unrecognized factor in expression"
         end
         num = Integer(match)
-        return num
+        return ConstantExpression.new(num)
     end
 end
