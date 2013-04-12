@@ -104,14 +104,18 @@ end
 # 124567890 for decimal
 NUM_REGEXP = /^
     (
-        (:?\-?0[xX][a-fA-F\d]+)
+        (?:\-?0[xX][a-fA-F\d]+)
         |
-        (:?\-?0[bB][01]+)
+        (?:\-?0[bB][01]+)
         |
-        (:?\-?0[0-7]+)
+        (?:\-?0[0-7]+)
         |
-        (:?\-?\d+)
+        (?:\-?\d+)
     )/x
+
+CHAR_REGEXP = /^'.'/
+STRING_REGEXP = /^"((?:.*(?:\\")*)*?)"/
+
 IDENT_REGEXP = /^([a-zA-Z]\w*)/
 
 #array
@@ -144,6 +148,16 @@ def parse_factor(text)
         end
 
         return result
+
+    elsif char == "'"
+        char = text.slice!(0..2)
+
+        if char[2] != "'"
+            raise "Expected char expression but found no closing single quote"
+        end
+
+        val = char[1].ord
+        return ConstantExpression.new(val)
 
     elsif char.match(IDENT_REGEXP)
         ident = text.slice!(IDENT_REGEXP)

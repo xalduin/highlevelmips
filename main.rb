@@ -1,5 +1,3 @@
-require_relative 'type.rb'
-
 require_relative 'statement.rb'
 require_relative 'process_variable.rb'
 require_relative 'func.rb'
@@ -8,6 +6,7 @@ require_relative 'if.rb'
 require_relative 'func_call.rb'
 
 require_relative 'func_gen.rb'
+require_relative 'asm_func.rb'
 
 def process_line(line, blocks, func_list)
     # Remove leading whitespace, comments and extra spaces
@@ -101,6 +100,7 @@ def parse_input(input_file)
 
     blocks = []
     func_list = FunctionList.new
+    init_asm_functions(func_list)
 
     line_number = 1
     text.each_line do |line|

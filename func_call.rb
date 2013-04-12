@@ -82,7 +82,7 @@ def process_func_call(match, func, func_list)
     end
 
     expr = process_expression(match[0], func.ident_list)
-    unless expression.is_a?(FunctionExpression) or expression.type == nil
+    unless expr.is_a?(FunctionExpression) or expr.type == nil
         raise "Invalid function call expression?"
     end
 

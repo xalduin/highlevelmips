@@ -16,6 +16,15 @@ RS_ARG       = '$a'
 RS_RETURN    = '$v'
 
 ##############
+# Data
+##############
+
+D_ASCIIZ = '.asciiz'
+D_WORD   = '.word'
+D_HALF   = '.half'
+D_BYTE   = '.byte'
+
+##############
 # Instructions
 ##############
 
@@ -62,11 +71,18 @@ I_LI   = 'li'
 # Set less than
 I_SLT  = 'slt'
 
+I_SYSCALL = 'syscall'
+
 # Returns a string with proper indentation
 def instruction_string(inst, params)
     result = " " * INDENT_SIZE
 
     result += inst
+
+    if params == nil or params.empty?
+        return result
+    end
+
     param_indent = INDENT_SIZE - inst.length
 
     result += " " * param_indent
@@ -190,4 +206,16 @@ end
 # Set less than
 def generate_slt(dest, left, right)
     return insruction_string(I_SLT, "#{dest}, #{left}, #{right}")
+end
+
+# Syscall
+def generate_syscall()
+    return instruction_string(I_SYSCALL, nil)
+end
+
+####################################
+# Label generating
+
+def generate_asciiz(value, label=nil)
+    return instruction_string(".asciiz", "\"#{value}\"")
 end

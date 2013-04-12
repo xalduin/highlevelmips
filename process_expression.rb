@@ -48,7 +48,7 @@ def check_func_call(expression, ident_list)
         param = param_list[index]
 
         unless Type.castable?(arg.type, param.type)
-            raise "Arg #'#{index}': #{arg_type} cant convert to '#{param.type}'"
+            raise "Arg #'#{index}': #{arg.type} cant convert to '#{param.type}'"
         end
     end
 end

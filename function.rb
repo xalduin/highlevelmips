@@ -8,20 +8,24 @@ class Function < Identifier
     attr :local_register_stack, :temp_register_stack
 
     def initialize(ident, return_type, arg_list, func_list)
-        super(ident.to_sym, return_type.to_sym)
 
         # Type checking
         unless arg_list.is_a? Array
             raise "arg_list must be an Array"
         end
 
-        return_type = return_type.to_sym
-        unless Type.include? return_type
-            raise "Unknown return type '#{return_type}'"
+        if return_type != nil
+            @return_type = return_type.to_sym
+            unless Type.include? @return_type
+                raise "Unknown return type '#{return_type}'"
+            end
+        else
+            @return_type = nil
         end
 
         @ident = ident.to_sym
-        @return_type = return_type
+        @type = @return_type
+
         @arg_list = arg_list
         @var_list = VariableList.new()
         @instr_list = []

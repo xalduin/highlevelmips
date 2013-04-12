@@ -61,12 +61,12 @@ B_FUNC_DECL = /func\s+
     ([a-zA-Z]\w*)
     \s* \( \s*
     (
-        ([a-zA-Z]\w*)\s*:\s*([a-zA-Z]+)
-        (\s*\,\s*([a-zA-Z]\w*)\s*:\s*([a-zA-Z]+))*
+        ([a-zA-Z]\w*)\s*:\s*([a-zA-Z]+(?:\[\])?)
+        (\s*\,\s*([a-zA-Z]\w*)\s*:\s*([a-zA-Z]+(?:\[\])?))*
     )?
     \s* \)
     (\s*->\s*
-     ([a-zA-Z]+)
+     ([a-zA-Z]+(?:\[\])?)
     )?/x
 
 B_ENDFUNC = /^endfunc$/

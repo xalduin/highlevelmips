@@ -1,5 +1,6 @@
 require_relative 'instructions.rb'
 require_relative 'function.rb'
+require_relative 'asm_func.rb'
 
 # Int -> [String]
 # size: number of bytes to allocate, should be a minimum of 8
@@ -136,7 +137,9 @@ end
 def generate_program(func_list)
     result = []
     func_list.each do |func|
-        result += generate_func(func)
+        unless func.is_a? AssemblyFunction
+            result += generate_func(func)
+        end
     end
     return result
 end

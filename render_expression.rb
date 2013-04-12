@@ -5,21 +5,27 @@ def generate_function_expression(expression, dest, overwrite=false)
     unless expression.is_a? FunctionExpression
         raise ArgumentError, "Expression must be a FunctionExpression"
     end
+
+    func = expression.value
     result = []
-    func_label = "func_" + expression.value.ident.to_s
 
     # Fill arg registers
     expression.args.each_with_index do |arg, index|
         result += generate_expression(arg, RS_ARG + index.to_s, false)
     end
 
-    result<< generate_jal(func_label)
+    if func.is_a? AssemblyFunction
+        result += func.render
+    else
+        func_label = "func_" + func.ident.to_s
+        result<< generate_jal(func_label)
+    end
 
     if expression.type != nil
         return_reg = RS_RETURN + "0"
         if overwrite
             dest.replace(return_reg)
-        else
+        elsif dest != return_reg
             result<< generate_move(dest, return_reg)
         end
     end
@@ -40,7 +46,7 @@ def generate_variable_expression(expression, dest, overwrite=false)
     # No array index = move instruction
     if expression.array_index == nil
         unless overwrite
-            return [generate_move(dest, reg)]
+            return [generate_move(dest, var_reg)]
         else
             # Overwritting allowed, no move instruction necessary
             dest.replace(var_reg)
