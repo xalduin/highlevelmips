@@ -1,4 +1,4 @@
-require_relative 'type.rb'
+require_relative 'types.rb'
 require_relative 'Identifier.rb'
 
 class Variable < Identifier
@@ -7,10 +7,9 @@ class Variable < Identifier
     # Can be used in structs for offsets or for s register number
     attr_accessor :num, :register
 
-    def initialize(typename, identifier, is_array)
+    def initialize(type, identifier)
         identifier = identifier.to_sym
-        typename = typename.to_sym
-        super(identifier, typename)
+        super(identifier, type)
 
         # Ensure that a valid type is being used
         unless Type.include?(typename)
@@ -26,7 +25,7 @@ class Variable < Identifier
     end
 
     def is_array?
-        return @array
+        return @type.is_a? ArrayType
     end
 end
 

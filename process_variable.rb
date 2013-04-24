@@ -10,22 +10,27 @@ require_relative 'instructions.rb'
 # Params:
 #   match - MatchData for the variable declaration
 #   var_list - VariableList to add this variable to
+#   type_table - TypeTable containing all defined basic types
 #
 # Return:
 #   true on success
 #
 # Raises an exception on type error or variable re-declaration
-def process_var(match, block)
-    var_list = block.var_list
+def process_var(match, block, type_table)
     ident = match[1]
     type = match[2]
-    is_array = (match[3] != nil)
 
+    var_list = block.var_list
     if var_list.has_ident?(ident)
         raise "Redeclared variable '#{ident}'"
     end
 
-    var = Variable.new(type, ident, is_array)
+    type = process_typestr(type, type_table) 
+    if type.is_a?(ArrayType)
+        raise "Array declaration not currently supported"
+    end
+
+    var = Variable.new(type, ident)
     block.add_variable(var)
 
     return true
@@ -57,12 +62,23 @@ def process_set(match, function)
     # Parse value and create instruction
     ident_list = function.ident_list
     value_expression = process_expression(value, ident_list)
+
+    unless value_expression.type.castable?(var.type)
+        raise "Cannot convert expression type #{value_expression.type.to_s} " +
+            "to variable type #{var.type.to_s}"
+    end
+
     instruction = SetVariableInstruction.new(var, value_expression, function)
 
     # The variable is being used as an array, add array index to instruction
     if array_index
         index_expression = process_expression(array_index, ident_list)
         instruction.array_index = index_expression
+
+        unless index_expression.type.castable?(WORD_TYPE)
+            raise "Cannot convert array index #{index_expression.type.to_s} " +
+                "to word type"
+        end
     end
 
     function.add_instruction(instruction)
@@ -87,33 +103,32 @@ class SetVariableInstruction
         if array_index
             index_reg = RS_TEMP + "1"
 
-            # Direct address given
-            if @array_index.type.to_s.end_with? "_address"
-                result += generate_expression(@array_index, index_reg, true)
+            result += generate_expression(@array_index, index_reg, false)
+            size = @var.type.size
 
-            # Integer address given, compute address
-            else
-                result += generate_expression(@array_index, index_reg, false)
-                size = Type.size(@var.type)
-                if size > 1
-                    result<< generate_mul(index_reg, index_reg, size)
-                end
-                result<< generate_add(index_reg, index_reg, var_reg)
+            # Multiple index by size of data type
+            if size > 1
+                result<< generate_mul(index_reg, index_reg, size)
             end
+
+            # Add index offset to array address value
+            result<< generate_add(index_reg, index_reg, var_reg)
 
             # Generate different store directions based on array type
             case @var.type
-                when :byte
+                when BYTE_TYPE
                     result<< generate_sb(temp_reg, 0, index_reg)
-                when :half
+                when HALF_TYPE
                     result<< generate_sh(temp_reg, 0, index_reg)
-                when :word
+                when WORD_TYPE
                     result<< generate_sw(temp_reg, 0, index_reg)
+                else
+                    raise "Unknown var type for set render"
             end
             return result
         end
 
-        # Non-array values are a cakewalk
+        # Non-array values are straightforward
         # Just store the expression in the variable register
         return generate_expression(@value, var_reg, false)
     end

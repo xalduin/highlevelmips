@@ -19,6 +19,10 @@ class BasicType < Type
     def castable?(other)
         return @ident == other.ident
     end
+
+    def to_s
+        return "#{ident}"
+    end
 end
 
 class IntegerType < BasicType
@@ -27,7 +31,21 @@ class IntegerType < BasicType
     end
 
     def castable?(other)
-        return other.is_a? IntegerType
+        return other.instance_of? IntegerType
+    end
+end
+
+WORD_TYPE = IntegerType.new(:word, 4)
+HALF_TYPE = IntegerType.new(:half, 2)
+BYTE_TYPE = IntegerType.new(:byte, 1)
+
+class ConstantType < BasicType
+    def initialize()
+        super(:const, 4)
+    end
+
+    def castable?(other)
+        return super(other)
     end
 end
 
@@ -48,11 +66,32 @@ class AddressType < Type
 
         return @element_type.castable?(other.element_type)
     end
+
+    def base_type
+        type = @element_type
+
+        while type.is_a? AddressType
+            type = type.element_type
+        end
+
+        return type
+    end
 end
 
 class ArrayType < AddressType
+    attr_reader :size
+
     def initialize(type)
         super(type)
+    end
+
+    def initialize(type, size)
+        super(type)
+        @size = size
+
+        unless size > 0
+            raise ArgumentError, "Size must be greater than 0"
+        end
     end
 
     def castable?(other)
@@ -61,6 +100,10 @@ class ArrayType < AddressType
         end
 
         return @element_type.castable?(other.element_type)
+    end
+
+    def to_s
+        return "#{other.to_s}[]"
     end
 end
 
@@ -88,18 +131,83 @@ class TypeTable
     end
 end
 
-def create_type_table
-    integer_types = {
-        :word => 4,
-        :half => 2,
-        :byte => 1
-    }
-
+def new_default_type_table
     table = TypeTable.new
 
-    integer_types.each do |type, size|
-        table.add(IntegerType.new(type, size))
-    end
+    table.add(WORD_TYPE)
+    table.add(HALF_TYPE)
+    table.add(BYTE_TYPE)
+    table.add(ConstantType.new)
 
     return table
+end
+
+# Matches:
+# 1. Identifier for basic type
+# 2. nil if not an array
+# 3. Constant (number) for number of array indices
+# 4. Address/reference/etc
+TYPE_REGEXP = /^([a-zA-Z]\w*)(\[(\d*)\])?(&+)?$/
+
+# String * TypeTable -> Type
+# Params:
+#   str:String      - string to parse for type information
+#   table:TypeTable - table containing all defined types
+# Result:
+#   Type representation of the input string
+#
+#   Exception is thrown if unable to parse string
+
+def process_typestr(str, table, allow_size=true)
+    str = str.strip
+    
+    match = str.match(TYPE_REGEXP)
+    unless match
+        raise "Unknown type format: '#{str}'"
+    end
+
+    # Extract values from match data
+    ident = match[1]
+    is_array = match[2] != nil
+    array_size = match[3]
+    references = match[4]
+
+    # If array size is specified, convert from string -> int
+    if array_size != nil
+        unless allow_size
+            raise "Not allowed to specify array size in: '#{str}'"
+        end
+
+        array_size = Integer(array_size)
+    end
+
+    # If references are used, record the number of them
+    if references != nil
+        raise "Reference type unsupported"
+        references = references.size
+    end
+    
+    # Look up basic type
+    type = table.get_type(ident)
+    if type == nil
+        raise "Unrecognized type '#{ident}'"
+    end
+
+    # If array is used, encapsulate type within array type
+    if is_array
+        if array_size != nil
+            type = ArrayType.new(type, array_size)
+        else
+            type = ArrayType.new(type)
+        end
+    end
+
+    # Wrap type in AddressType for each reference used
+    if references != nil
+        (1..references).each do
+            type = AddressType.new(type)
+        end
+    end
+
+    return type
 end
