@@ -19,6 +19,7 @@ RS_RETURN    = '$v'
 # Data
 ##############
 
+ALIGN    = '.align'
 D_ASCIIZ = '.asciiz'
 D_WORD   = '.word'
 D_HALF   = '.half'

@@ -66,7 +66,7 @@ class ConstantExpression < Expression
 
         super()
         @value = value
-        @type = :const
+        @type = nil
     end
 end
 
@@ -78,6 +78,7 @@ class OperatorExpression < Expression
             raise ArgumentError, "Unknown operator '#{op}'"
         end
 
+        super()
         @left = left
         @op = op
         @right = right

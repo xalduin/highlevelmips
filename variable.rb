@@ -2,8 +2,6 @@ require_relative 'types.rb'
 require_relative 'Identifier.rb'
 
 class Variable < Identifier
-    attr_reader :array
-
     # Can be used in structs for offsets or for s register number
     attr_accessor :num, :register
 
@@ -12,13 +10,12 @@ class Variable < Identifier
         super(identifier, type)
 
         # Ensure that a valid type is being used
-        unless Type.include?(typename)
-            raise "Invalid type '#{typename}'"
+        unless type.is_a? Type
+            raise "Invalid type '#{type}'"
         end
 
         @ident = identifier
-        @type  = typename
-        @array = is_array
+        @type  = type
 
         @num = nil
         @register = nil
@@ -81,5 +78,10 @@ class VariableList
     end
     def size
         return @variables.size
+    end
+    def each
+        @variables.each_value do |value|
+            yield value
+        end
     end
 end

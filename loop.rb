@@ -38,13 +38,13 @@ end
 # :type => exitwhen
 # :index => loop index
 # :value => value
-def process_exitwhen(match, func)
+def process_exitwhen(match, func, type_table)
     unless func.is_a? Function
         raise "exitwhen statements must be used inside functions"
     end
 
     expression = match[1]
-    value = process_condition(expression, func.ident_list)
+    value = process_condition(expression, func.ident_list, type_table)
 
     instruction = ExitwhenInstruction.new(value, func)
     func.add_instruction(instruction)

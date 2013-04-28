@@ -5,7 +5,7 @@ class Type
 end
 
 class BasicType < Type
-    attr_reader :ident, :size
+    attr_reader :ident, :size, :total_size
 
     def initialize(ident, size)
         unless size > 0
@@ -14,6 +14,7 @@ class BasicType < Type
 
         @ident = ident.to_sym
         @size = size
+        @total_size = size
     end
 
     def castable?(other)
@@ -31,7 +32,7 @@ class IntegerType < BasicType
     end
 
     def castable?(other)
-        return other.instance_of? IntegerType
+        return other.is_a? IntegerType
     end
 end
 
@@ -39,7 +40,7 @@ WORD_TYPE = IntegerType.new(:word, 4)
 HALF_TYPE = IntegerType.new(:half, 2)
 BYTE_TYPE = IntegerType.new(:byte, 1)
 
-class ConstantType < BasicType
+class ConstantType < IntegerType 
     def initialize()
         super(:const, 4)
     end
@@ -49,14 +50,19 @@ class ConstantType < BasicType
     end
 end
 
+CONST_TYPE = ConstantType.new
+
 class AddressType < Type
-    attr_reader :element_type
+    SIZE = 4
+    attr_reader :element_type, :size, :total_size
 
     def initialize(type)
         unless type.is_a? Type
             raise ArgumentError, "type must be of class Type"
         end
         @element_type = type
+        @size = SIZE
+        @total_size = size
     end
 
     def castable?(other)
@@ -79,18 +85,14 @@ class AddressType < Type
 end
 
 class ArrayType < AddressType
-    attr_reader :size
+    attr_reader :num_elements
 
-    def initialize(type)
+    def initialize(type, num_elements=nil)
         super(type)
-    end
+        @num_elements = num_elements 
 
-    def initialize(type, size)
-        super(type)
-        @size = size
-
-        unless size > 0
-            raise ArgumentError, "Size must be greater than 0"
+        if num_elements != nil && num_elements <= 0
+            raise ArgumentError, "num_elements must be greater than 0"
         end
     end
 
@@ -100,6 +102,10 @@ class ArrayType < AddressType
         end
 
         return @element_type.castable?(other.element_type)
+    end
+
+    def total_size
+        return @size + @element_type.size * @num_elements
     end
 
     def to_s
@@ -137,7 +143,7 @@ def new_default_type_table
     table.add(WORD_TYPE)
     table.add(HALF_TYPE)
     table.add(BYTE_TYPE)
-    table.add(ConstantType.new)
+    table.add(CONST_TYPE)
 
     return table
 end

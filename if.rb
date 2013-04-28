@@ -8,7 +8,7 @@ require_relative 'function.rb'
 #
 # Checks the matched string to ensure it follows the correct if statement
 # formula then adds an entry to the instruction list
-def process_if(match, func)
+def process_if(match, func, type_table)
 
     unless func.is_a? Function
         raise "if statement must be used inside a function"
@@ -16,7 +16,7 @@ def process_if(match, func)
 
     # Try to process the condition
     expression = match[1]
-    value = process_condition(expression, func.ident_list)
+    value = process_condition(expression, func.ident_list, type_table)
 
     instruction = IfInstruction.new(value, func)
     func.add_instruction(instruction)

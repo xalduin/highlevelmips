@@ -1,4 +1,4 @@
-require_relative 'type.rb'
+require_relative 'types.rb'
 require_relative 'identifier.rb'
 require_relative 'variable.rb'
 
@@ -14,14 +14,7 @@ class Function < Identifier
             raise "arg_list must be an Array"
         end
 
-        if return_type != nil
-            @return_type = return_type.to_sym
-            unless Type.include? @return_type
-                raise "Unknown return type '#{return_type}'"
-            end
-        else
-            @return_type = nil
-        end
+        @return_type = return_type
 
         @ident = ident.to_sym
         @type = @return_type

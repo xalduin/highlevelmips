@@ -1,4 +1,4 @@
-require_relative 'type.rb'
+require_relative 'types.rb'
 require_relative 'expression.rb'
 
 def generate_function_expression(expression, dest, overwrite=false)
@@ -55,27 +55,25 @@ def generate_variable_expression(expression, dest, overwrite=false)
     end
 
     addr_reg = RS_TEMP + "0"
-    is_address = expression.array_index.type.to_s.ends_with?("_address")
-    result = generate_expression(expression.array_index, temp_reg, true)
+    result = generate_expression(expression.array_index, addr_reg, true)
 
     # Convert integer offset into address
-    unless is_address
-        # It's okay to re-use t0
-        temp_reg = RS_TEMP + "0"
-        size = Type.size(var.type)
+    # It's okay to re-use t0
+    temp_reg = RS_TEMP + "0"
+    size = var.type.size
 
-        result<< generate_mul(temp_reg, addr_reg, size)
-        result<< generate_add(temp_reg, var_reg, temp_reg)
-        addr_reg = temp_reg
-    end
+    result<< generate_mul(temp_reg, addr_reg, size)
+    result<< generate_add(temp_reg, var_reg, temp_reg)
+    addr_reg = temp_reg
 
     # Generate load instruction depending on type of data
-    case var.type
-        when :byte
+    base_type = var.base_type
+    case base_type
+        when BYTE_TYPE
             result<< generate_lb(dest, 0, addr_reg)
-        when :half
+        when HALF_TYPE
             result<< generate_lh(dest, 0, addr_reg)
-        when :word
+        when WORD_TYPE
             result<< generate_lw(dest, 0, addr_reg)
     end
     return result

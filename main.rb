@@ -8,7 +8,10 @@ require_relative 'func_call.rb'
 require_relative 'func_gen.rb'
 require_relative 'asm_func.rb'
 
-def process_line(line, blocks, func_list)
+require_relative 'types.rb'
+require_relative 'string_table.rb'
+
+def process_line(line, blocks, func_list, type_table)
     # Remove leading whitespace, comments and extra spaces
     line = line.strip
     line.gsub!(/#.*/, '')
@@ -19,7 +22,7 @@ def process_line(line, blocks, func_list)
 
     match = line.match(S_VAR_DECL)
     if match
-        return process_var(match, block)
+        return process_var(match, block, type_table)
     end
 
     match = line.match(S_CONST_DECL)
@@ -30,7 +33,7 @@ def process_line(line, blocks, func_list)
 
     match = line.match(B_FUNC_DECL)
     if match
-        func = process_func_decl(match, func_list, block)
+        func = process_func_decl(match, func_list, block, type_table)
         blocks.push(func)
         return true
     end
@@ -44,7 +47,7 @@ def process_line(line, blocks, func_list)
 
     match = line.match(B_IF_DECL)
     if match
-        return process_if(match, block)
+        return process_if(match, block, type_table)
     end
 
     match = line.match(B_ELSE_DECL)
@@ -64,7 +67,7 @@ def process_line(line, blocks, func_list)
 
     match = line.match(B_EXITWHEN)
     if match
-        return process_exitwhen(match, block)
+        return process_exitwhen(match, block, type_table)
     end
 
     match = line.match(B_ENDLOOP)
@@ -74,17 +77,17 @@ def process_line(line, blocks, func_list)
 
     match = line.match(S_FUNC_CALL)
     if match
-        return process_func_call(match, block, func_list)
+        return process_func_call(match, block, func_list, type_table)
     end
 
     match = line.match(S_SET_VAR)
     if match
-        return process_set(match, block)
+        return process_set(match, block, type_table)
     end
 
     match = line.match(S_RETURN)
     if match
-        return process_return(match, block)
+        return process_return(match, block, type_table)
     end
 
     if line.match(/^\s*$/)
@@ -99,6 +102,7 @@ def parse_input(input_file)
     text.gsub!(/\r\n?/, "\n")
 
     blocks = []
+    type_table = new_default_type_table()
     func_list = FunctionList.new
     init_asm_functions(func_list)
 
@@ -106,15 +110,15 @@ def parse_input(input_file)
     text.each_line do |line|
 
         begin
-            process_line(line, blocks, func_list)
+            process_line(line, blocks, func_list, type_table)
         rescue RuntimeError => e
             puts "#{e.message}" 
             puts "Line #{line_number}: #{line}"
             puts "Failed to parse file"
             return nil
         rescue => e
-            puts "#{e.message}"
             puts "Line #{line_number}: #{line}"
+            puts "#{e.message}"
             print e.backtrace.take(5).join("\n")
             puts ""
             return nil
@@ -146,7 +150,6 @@ def run_test
     end
 end
 
-Type.init
 run_test
 #run_program
 #puts "Finished"

@@ -1,4 +1,4 @@
-require_relative 'type.rb'
+require_relative 'types.rb'
 require_relative 'expression.rb'
 
 require_relative 'identifier.rb'
@@ -47,7 +47,7 @@ def check_func_call(expression, ident_list)
     args.each_with_index do |arg, index|
         param = param_list[index]
 
-        unless Type.castable?(arg.type, param.type)
+        unless arg.type.castable?(param.type)
             raise "Arg #'#{index}': #{arg.type} cant convert to '#{param.type}'"
         end
     end
@@ -61,7 +61,7 @@ end
 # Result:
 #   Exception raised on error
 
-def check_expression(expression, ident_list)
+def check_expression(expression, ident_list, type_table)
     if expression == nil
         return nil
     end
@@ -70,6 +70,7 @@ def check_expression(expression, ident_list)
 
         # Nothing to be done
         when ConstantExpression
+            expression.type = CONST_TYPE
             return
 
         # Ensure that the identifier has been defined as a variable and then
@@ -87,37 +88,27 @@ def check_expression(expression, ident_list)
                     "'#{expression.value}'"
             end
 
+            # Make sure array_index is used with array
+            if var.is_array? and expression.array_index == nil
+                raise "Must use array index with array"
+            end
+
+            expression.value = var
+            expression.type = var.type
+
             # Special handling for arrays
             if var.is_array? and expression.array_index != nil
-                check_expression(expression.array_index)
-                index_type = expression.array_index.type.to_s
+                check_expression(expression.array_index, ident_list, type_table)
+                index_type = expression.array_index.type
 
-                # Using a pointer instead of integer for array index
-                if index_type.ends_with?("_address")
-                    index_type.strip!("_address")
-
-                    # When using a memory address var, types must match
-                    unless index_type.castable?(var.type)
-                        raise "Address type must match variable type:" +
-                            "address:'#{index_type}' var:'#{var.type}'"
-                    end
-                else
-                    # Non-address array index must be converted to word
-                    unless Type.castable?(index_type, :word)
-                        raise "Array index error: Cannot convert " +
-                            "'#{index_type}' to word"
-                    end
+                # Non-address array index must be converted to word
+                unless index_type.castable?(WORD_TYPE)
+                    raise "Array index error: Cannot convert " +
+                        "'#{index_type}' to word"
                 end
 
-                expression.type = var.type
-
-            # Array variable used without index = pointer mode
-            elsif var.is_array? and expression.array_index == nil
-                expression.type = (var.type.to_s + "_address").to_sym
-            else
-                expression.type = var.type
+                expression.type = var.type.element_type
             end
-            expression.value = var
 
         # Check that the identifier has been defined as a function and then
         # Change the expression's value to that function
@@ -135,7 +126,7 @@ def check_expression(expression, ident_list)
     
             # Check each argument (updates their type values)
             expression.args.each do |arg|
-                check_expression(arg, ident_list)
+                check_expression(arg, ident_list, type_table)
             end
 
             check_func_call(expression, ident_list)
@@ -150,42 +141,12 @@ def check_expression(expression, ident_list)
         when OperatorExpression 
             left = expression.left
             right = expression.right
-            check_expression(left, ident_list)
-            check_expression(right, ident_list)
-
-            # Special case for addresses
-            op = expression.op
-            if left.type.to_s.end_with?("_address")
-
-                # Cannot use multiplication or division with addresses on
-                # either side
-                if op == :mul or op == :div
-                    raise "Cannot use * or / with address values"
-                end
-
-                # If a conditional operator is used, both sides must be
-                # addresses
-                if OP_CONDITION_LIST.include? op
-                    unless right.type.to_s.ends_with("_address")
-                        raise "Must use conditional operator with 2 addresses"
-                    end
-                    expression.type = :byte
-                    return
-                end
-
-                unless Type.castable?(right.type, :word)
-                    puts "#{right.type}"
-                    raise "Can only add/subtract integer values from addresses"
-                end
-
-                expression.type = left.type
-                return
-            end
+            check_expression(left, ident_list, type_table)
+            check_expression(right, ident_list, type_table)
 
             # Much simpler without address things in the way
-            unless Type.castable?(right.type, left.type) ||
-                   Type.castable?(left.type, right.type)
-                raise "Cannot convert between '#{right.type}' + '#{left.type}'"
+            unless right.type.castable?(left.type)
+                raise "Cannot convert '#{right.type}' to '#{left.type}'"
             end
             expression.type = left.type
 
@@ -219,15 +180,15 @@ def simplify_expression(expression)
 end
 
 # String * IdentifierList -> Expression
-def process_expression(text, ident_list)
+def process_expression(text, ident_list, type_table)
     expression = parse_expression(text, true)
-    check_expression(expression, ident_list)
+    check_expression(expression, ident_list, type_table)
     return simplify_expression(expression)
 end 
 
 # String * IdentifierList -> Expression
-def process_condition(text, ident_list)
+def process_condition(text, ident_list, type_table)
     expression = parse_condition(text)
-    check_expression(expression, ident_list)
+    check_expression(expression, ident_list, type_table)
     return simplify_expression(expression)
 end

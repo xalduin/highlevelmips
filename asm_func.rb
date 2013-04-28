@@ -1,20 +1,16 @@
+require_relative 'types.rb'
 require_relative 'instructions.rb'
 require_relative 'function.rb'
 
 class AssemblyFunction < Function
     def initialize(ident, return_type, arg_list)
-        unless return_type == nil
-            @type = return_type.to_sym
-        else
-            @type = nil
-        end
-
+        @type = return_type
         @ident = ident.to_sym
         @arg_list = arg_list
     end
 end
 
-PRINT_INT = 0
+PRINT_INT = 1
 PRINT_STR = 4
 READ_INT = 5
 
@@ -25,7 +21,7 @@ class PrintIntFunction < AssemblyFunction
     IDENT = :print_int
 
     def initialize
-        arg_list = [Variable.new(:word, :__arg, false) ]
+        arg_list = [Variable.new(WORD_TYPE, :__arg) ]
         super(IDENT, nil, arg_list)
     end
 
@@ -42,7 +38,7 @@ class PrintStringFunction < AssemblyFunction
     IDENT = :print_string
 
     def initialize
-        arg_list = [ Variable.new(:byte, :__arg, true) ]
+        arg_list = [ Variable.new(ArrayType.new(BYTE_TYPE), :__arg) ]
         super(IDENT, nil, arg_list)
     end
 
@@ -59,7 +55,7 @@ class ReadIntFunction < AssemblyFunction
     IDENT = :read_int
 
     def initialize
-        super(IDENT, :word, [])
+        super(IDENT, WORD_TYPE, [])
     end
 
     def render

@@ -14,7 +14,7 @@ FUNC_ARGS_REGEXP = /([a-zA-Z]\w*)\s*:\s*([a-zA-Z]+)(\[\])?/
 # arg_list must be an empty array
 # Stores Variables in the arg_list array
 
-def process_args(args, arg_list)
+def process_args(args, arg_list, type_table)
     if args == nil || args.empty?
         return true
     end
@@ -29,13 +29,10 @@ def process_args(args, arg_list)
     arg_defs.each do |arg_match|
         name     = arg_match[0]
         type     = arg_match[1]
-        is_array = arg_match[2] != nil
 
-        unless Type.include?(type)
-            raise "Invalid argument type '#{type}'"
-        end
+        type_val = process_typestr(type, type_table, false)
 
-        var = Variable.new(type, name, is_array)
+        var = Variable.new(type_val, name)
         arg_list<< var
     end
 
@@ -51,7 +48,7 @@ end
 # the local table is initialized as such:
 # [:instructions] = 0
 
-def process_func_decl(match, func_list, block)
+def process_func_decl(match, func_list, block, type_table)
 
     if block != nil
         raise "Cannot declare a function within another block"
@@ -65,14 +62,13 @@ def process_func_decl(match, func_list, block)
         raise "Redeclared function: '#{name}'"
     end
 
+    # If result type specified, lookup corresponding Type
     if result_type
-        unless Type.include?(result_type)
-            raise "Invalid return type '#{result_type}'"
-        end
+        result_type = process_typestr(result_type, type_table, false)
     end
 
     arg_list = []
-    process_args(args, arg_list)
+    process_args(args, arg_list, type_table)
 
     func = Function.new(name, result_type, arg_list, func_list)
     func_list.add(func)
@@ -90,7 +86,7 @@ def process_endfunc(func)
     return true
 end
 
-def process_return(match, func)
+def process_return(match, func, type_table)
     instruction = ReturnInstruction.new(func)
     func.add_instruction(instruction)
 
@@ -106,9 +102,10 @@ def process_return(match, func)
         if func.return_type == nil
             raise "Return value given when none expected"
         end
-        return_expression = process_expression(match[1], func.ident_list)
+        return_expression = process_expression(match[1], func.ident_list,
+                                               type_table)
 
-        unless Type.castable?(return_expression.type, func.type)
+        unless return_expression.type.castable?(func.type)
             raise "Return type doesn't match function type:\n" +
                   "'#{return_expression.type}' -> '#{func.type}'"
         end

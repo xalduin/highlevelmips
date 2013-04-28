@@ -3,7 +3,7 @@
 # 2. type
 # 3. [] if the type is an array (optional)
 
-S_VAR_DECL   = /^var \s+ ([a-zA-Z]\w*) \s* : \s* ([a-z]+) (\[ \])? $/x
+S_VAR_DECL   = /^var \s+ ([a-zA-Z]\w*) \s* : \s* (.+)  $/x
 
 # Matching for const declaration
 # 1. identifier

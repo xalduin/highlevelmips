@@ -1,3 +1,4 @@
+require_relative 'types.rb'
 require_relative 'instructions.rb'
 require_relative 'function.rb'
 require_relative 'asm_func.rb'
@@ -9,19 +10,19 @@ require_relative 'asm_func.rb'
 # Return address
 # Saved registers
 # Saved frame pointer
-def generate_stack_allocate(size)
+def generate_stack_allocate(var_list)
     result = []
 
-    if size < 8
-        puts "Need at least 8 bytes for stack"
-        return nil
+    size = 8
+    var_list.each do |var|
+        size += 4
     end
 
     # Allocate space on stack
     result<< generate_addi(R_STACK_POINTER, R_STACK_POINTER, -size)
 
     # Store the frame pointer on the top of the stack
-    result<< generate_sw(R_FRAME_POINTER, R_STACK_POINTER, 0)
+    result<< generate_sw(R_FRAME_POINTER, 0, R_STACK_POINTER)
 
     # Set frame pointer to location of return address
     result<< generate_addi(R_FRAME_POINTER,
@@ -33,12 +34,13 @@ def generate_stack_allocate(size)
 
     # Store existing local (S) registers
     index = 0
-    size -= 8
-    while index * 4 < size
-        result<<generate_sw(RS_LOCAL + index.to_s,
-                            -(index + 1) * REGISTER_SIZE,
-                            R_FRAME_POINTER)
+    offset = -4
+    var_list.each do |var|
+        result << generate_sw(RS_LOCAL + index.to_s,
+                                offset,
+                                R_FRAME_POINTER)
 
+        offset -= 4
         index += 1
     end
 
@@ -65,17 +67,23 @@ end
 # [ Saved registers]
 # [ Saved frame pointer]
 #  ---------------------- <- Stack pointer
-def generate_stack_deallocate(size)
+def generate_stack_deallocate(var_list)
     result = []
 
+    offset = -REGISTER_SIZE
     index = 0
-    while index * (REGISTER_SIZE) < size - (REGISTER_SIZE * 2)
-        result<<generate_lw(RS_LOCAL + index.to_s,
-                            -(index + 1) * REGISTER_SIZE,
-                            R_FRAME_POINTER)
+    size = 2 * REGISTER_SIZE
 
+    var_list.each do |var|
+        result<< generate_lw(RS_LOCAL + index.to_s,
+                             offset,
+                             R_FRAME_POINTER)
+
+        offset -= REGISTER_SIZE
         index += 1
+        size += REGISTER_SIZE
     end
+
     # Restore return address and frame pointer
     result<< generate_lw(R_RETURN_ADDRESS, 0, R_FRAME_POINTER)
     result<< generate_lw(R_FRAME_POINTER, 0, R_STACK_POINTER)
@@ -107,14 +115,11 @@ def generate_func(func)
     func_name = func.ident.to_s
     instructions = func.instr_list
 
-    # Calculate stack size needed, variables + return address + frame pointer
-    var_count = func.var_list.size
-    stack_size = (var_count + 2) * REGISTER_SIZE 
 
     # Generate function definition and stack allocation
     result = []
     result<< generate_label("func_" + func_name)
-    result += generate_stack_allocate(stack_size)
+    result += generate_stack_allocate(func.var_list)
 
     # Store arguments (a registers) in local (s registers)
     result += generate_store_parmeters(func.arg_list)
@@ -127,7 +132,7 @@ def generate_func(func)
     end
 
     result<< generate_label("func_" + func_name + "_done")
-    result += generate_stack_deallocate(stack_size)
+    result += generate_stack_deallocate(func.arg_list)
 
     result<< generate_jr(R_RETURN_ADDRESS)
 
