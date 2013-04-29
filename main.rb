@@ -150,6 +150,14 @@ def run_test
     end
 end
 
-run_test
-#run_program
-#puts "Finished"
+if ARGV.size == 0
+    run_test
+elsif ARGV.size > 1
+    puts "Error, too many arguments passed to program"
+else
+
+    func_list = parse_input(ARGV[0])
+    if func_list != nil
+        create_asm(func_list, ARGV[0] + ".asm")
+    end
+end
