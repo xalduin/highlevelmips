@@ -162,6 +162,7 @@ def parse_factor(text)
     elsif char.match(IDENT_REGEXP)
         ident = text.slice!(IDENT_REGEXP)
 
+        # Check if the identity being used refers to an array
         text.lstrip!
         match = text.slice!(ARRAY_REGEXP)
         unless match == nil or match.empty?

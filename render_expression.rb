@@ -67,7 +67,7 @@ def generate_variable_expression(expression, dest, overwrite=false)
     addr_reg = temp_reg
 
     # Generate load instruction depending on type of data
-    base_type = var.base_type
+    base_type = var.type.base_type
     case base_type
         when BYTE_TYPE
             result<< generate_lb(dest, 0, addr_reg)

@@ -115,9 +115,9 @@ end
 
 class VariableExpression < Expression
     attr_accessor :array_index
-    def initialize(ident, array_index)
+    def initialize(ident, array_index=nil)
         super()
         @value = ident.to_sym
-        @array_index = nil
+        @array_index = array_index
     end
 end

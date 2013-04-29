@@ -39,7 +39,7 @@ end
 # Adds an instruction for setting the value of a variable
 # Checks to ensure that the variable was previously defined and that it has
 # a proper expression
-def process_set(match, function)
+def process_set(match, function, type_table)
     name = match[1]
     array_index = match[3]
     value = match[4]
@@ -61,18 +61,24 @@ def process_set(match, function)
 
     # Parse value and create instruction
     ident_list = function.ident_list
-    value_expression = process_expression(value, ident_list)
+    value_expression = process_expression(value, ident_list, type_table)
 
-    unless value_expression.type.castable?(var.type)
+    var_type = var.type
+    if array_index
+        var_type = var.type.element_type
+    end
+
+    unless value_expression.type.castable?(var_type)
         raise "Cannot convert expression type #{value_expression.type.to_s} " +
-            "to variable type #{var.type.to_s}"
+            "to variable type #{var_type.to_s}"
     end
 
     instruction = SetVariableInstruction.new(var, value_expression, function)
 
     # The variable is being used as an array, add array index to instruction
     if array_index
-        index_expression = process_expression(array_index, ident_list)
+        index_expression = process_expression(array_index, ident_list,
+                                                                    type_table)
         instruction.array_index = index_expression
 
         unless index_expression.type.castable?(WORD_TYPE)
@@ -97,12 +103,13 @@ class SetVariableInstruction
 
     def render
         var_reg = @var.register
-        temp_reg = RS_TEMP + "0"
 
-        result = []
         if array_index
+            result = []
+            value_reg = RS_TEMP + "0"
             index_reg = RS_TEMP + "1"
 
+            result += generate_expression(@value, value_reg, true)
             result += generate_expression(@array_index, index_reg, false)
             size = @var.type.size
 
@@ -115,20 +122,20 @@ class SetVariableInstruction
             result<< generate_add(index_reg, index_reg, var_reg)
 
             # Generate different store directions based on array type
-            case @var.type
+            case @var.type.element_type
                 when BYTE_TYPE
-                    result<< generate_sb(temp_reg, 0, index_reg)
+                    result<< generate_sb(value_reg, 0, index_reg)
                 when HALF_TYPE
-                    result<< generate_sh(temp_reg, 0, index_reg)
+                    result<< generate_sh(value_reg, 0, index_reg)
                 when WORD_TYPE
-                    result<< generate_sw(temp_reg, 0, index_reg)
+                    result<< generate_sw(value_reg, 0, index_reg)
                 else
-                    raise "Unknown var type for set render"
+                    raise "Unknown var type '#{@var.type}' for set render"
             end
             return result
         end
 
-        # Non-array values are straightforward
+        # Non-array value
         # Just store the expression in the variable register
         return generate_expression(@value, var_reg, false)
     end

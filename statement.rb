@@ -39,14 +39,13 @@ S_SET_ARRAY = /([a-zA-Z]\w*) \s* \[ \s* (\d+) \s* \] \s* = \s* (.+)/x
 S_RETURN = /^return \s+ (.*)$/x
 
 # Matching for function call
-# 1. Variable to store result
-# 2. identifier
-# 3. all arguments as a single string (spaces included)
+# 1. identifier
+# 2. all arguments as a single string (spaces included)
 S_FUNC_CALL = /^
     ([a-zA-Z]\w*)
     \s*
     \( \s* 
-          ((\w+)? \s*(\,\s*(\w+))*)
+          (.*)
     \s* 
     \)
     $/x

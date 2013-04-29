@@ -109,7 +109,7 @@ class ArrayType < AddressType
     end
 
     def to_s
-        return "#{other.to_s}[]"
+        return "#{@element_type.to_s}[]"
     end
 end
 
@@ -153,7 +153,7 @@ end
 # 2. nil if not an array
 # 3. Constant (number) for number of array indices
 # 4. Address/reference/etc
-TYPE_REGEXP = /^([a-zA-Z]\w*)(\[(\d*)\])?(&+)?$/
+TYPE_REGEXP = /^([a-zA-Z]\w*)(\[(\d+)?\])?(&+)?$/
 
 # String * TypeTable -> Type
 # Params:
@@ -179,7 +179,7 @@ def process_typestr(str, table, allow_size=true)
     references = match[4]
 
     # If array size is specified, convert from string -> int
-    if array_size != nil
+    if array_size != nil 
         unless allow_size
             raise "Not allowed to specify array size in: '#{str}'"
         end

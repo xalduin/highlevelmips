@@ -5,8 +5,7 @@ require_relative 'variable.rb'
 # Regexp for a single function argument
 # 1. Identifier
 # 2. Type
-# 3. nil if value isn't an array
-FUNC_ARGS_REGEXP = /([a-zA-Z]\w*)\s*:\s*([a-zA-Z]+)(\[\])?/
+FUNC_ARGS_REGEXP = /([a-zA-Z]\w*)\s*:\s*([a-zA-Z]+(?:\[\])?)/
 
 # String * [] -> true/nil
 # Returns true on success, nil on failure
