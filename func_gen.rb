@@ -132,7 +132,7 @@ def generate_func(func)
     end
 
     result<< generate_label("func_" + func_name + "_done")
-    result += generate_stack_deallocate(func.arg_list)
+    result += generate_stack_deallocate(func.var_list)
 
     result<< generate_jr(R_RETURN_ADDRESS)
 
