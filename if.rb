@@ -92,8 +92,13 @@ class ElseInstruction
     end
 
     def render
-        label = "#{@func.ident}_else_#{@num}"
-        return [generate_label(label)]
+        label_else = "#{@func.ident}_else_#{@num}"
+        label_end = "#{@func.ident}_endif_#{@num}"
+
+        return [
+                generate_j(label_end),
+                generate_label(label_else)
+               ]
     end
 end
 
