@@ -111,7 +111,11 @@ class SetVariableInstruction
 
             result += generate_expression(@value, value_reg, true)
             result += generate_expression(@array_index, index_reg, false)
+
             size = @var.type.size
+            if @var.is_array?
+                size = @var.type.element_type.size
+            end
 
             # Multiple index by size of data type
             if size > 1

@@ -60,9 +60,16 @@ def generate_variable_expression(expression, dest, overwrite=false)
     # Convert integer offset into address
     # It's okay to re-use t0
     temp_reg = RS_TEMP + "0"
-    size = var.type.size
 
-    result<< generate_mul(temp_reg, addr_reg, size)
+    size = var.type.size
+    if var.is_array?
+        size = var.type.element_type.size
+    end
+
+    if size > 1
+        result<< generate_mul(temp_reg, addr_reg, size)
+    end
+
     result<< generate_add(temp_reg, var_reg, temp_reg)
     addr_reg = temp_reg
 
