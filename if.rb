@@ -88,7 +88,7 @@ class ElseInstruction
         @num = IfInstruction.num_stack[-1]
         raise "No matching if statement for else" if @num == nil
 
-        else_hash[@num] = true
+        IfInstruction.else_hash[@num] = true
     end
 
     def render
