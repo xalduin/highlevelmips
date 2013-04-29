@@ -88,9 +88,6 @@ end
 
 class ConditionExpression < OperatorExpression
     def initialize(left, op, right)
-        unless OP_CONDITION_LIST.include?(op)
-            raise ArgumentError, "Conditional operator expected"
-        end
         super(left, op.to_sym, right)
     end
 end

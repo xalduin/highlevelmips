@@ -206,7 +206,7 @@ end
 
 # Set less than
 def generate_slt(dest, left, right)
-    return insruction_string(I_SLT, "#{dest}, #{left}, #{right}")
+    return instruction_string(I_SLT, "#{dest}, #{left}, #{right}")
 end
 
 # Syscall
