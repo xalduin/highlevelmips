@@ -108,9 +108,10 @@ class SetVariableInstruction
             result = []
             value_reg = RS_TEMP + "0"
             index_reg = RS_TEMP + "1"
+            index_reg_temp = RS_TEMP + "1"
 
             result += generate_expression(@value, value_reg, true)
-            result += generate_expression(@array_index, index_reg, false)
+            result += generate_expression(@array_index, index_reg_temp, true)
 
             size = @var.type.size
             if @var.is_array?
@@ -119,7 +120,7 @@ class SetVariableInstruction
 
             # Multiple index by size of data type
             if size > 1
-                result<< generate_mul(index_reg, index_reg, size)
+                result<< generate_mul(index_reg, index_reg_temp, size)
             end
 
             # Add index offset to array address value
