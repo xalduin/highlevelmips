@@ -228,7 +228,7 @@ def generate_condition_negate(expression, dest_label)
     op = expression.op
 
     op = OP_OPPOSITE_TABLE[op]
-    expression = ConditionExpression.new(right, op, left)
+    expression = ConditionExpression.new(left, op, right)
 
     return generate_condition(expression, dest_label)
 end
