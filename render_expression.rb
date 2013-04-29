@@ -94,8 +94,8 @@ def generate_operator_expression(expression, dest, overwrite=false)
     left = expression.left
     right = expression.right
 
-    left_const  = left.type == :const
-    right_const = right.type == :const
+    left_const  = left.type.is_a? ConstantType
+    right_const = right.type.is_a? ConstantType
     op = expression.op
 
     # left or right, but not both are constant
@@ -123,9 +123,9 @@ def generate_operator_expression(expression, dest, overwrite=false)
         result += generate_expression(right, right_reg, true)
     end
 
-    if overwrite
-        dest.replace left_reg
-    end
+    #if overwrite
+    #    dest.replace left_reg
+    #end
 
     case expression.op
         when :add
