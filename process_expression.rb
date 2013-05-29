@@ -169,9 +169,11 @@ def simplify_expression(expression)
 
     # If both sides of expression are constants, we can find the result
     if left.is_a? ConstantExpression and right.is_a? ConstantExpression
-        return ConstantExpression.new(evaluate_const(left.value,
+        expr = ConstantExpression.new(evaluate_const(left.value,
                                                      op,
                                                      right.value))
+        expr.type = CONST_TYPE
+        return expr
     end
 
     expression.left = left

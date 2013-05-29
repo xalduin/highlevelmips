@@ -117,4 +117,8 @@ class VariableExpression < Expression
         @value = ident.to_sym
         @array_index = array_index
     end
+
+    def to_s
+        return "#{@value}[#{@array_index}]"
+    end
 end
