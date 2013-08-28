@@ -148,7 +148,11 @@ def check_expression(expression, ident_list, type_table)
             unless right.type.castable?(left.type)
                 raise "Cannot convert '#{right.type}' to '#{left.type}'"
             end
-            expression.type = left.type
+            if left.type.is_a? ConstantType
+                expression.type = right.type
+            else
+                expression.type = left.type
+            end
 
         else
             raise "Unrecognized expression '#{expression}'"
