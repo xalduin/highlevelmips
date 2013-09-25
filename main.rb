@@ -144,7 +144,6 @@ end
 
 def run_test
     func_list = parse_input('input.hlm')
-    puts "Finish input"
     if func_list != nil
         create_asm(func_list, 'output.asm')
     end
@@ -153,7 +152,7 @@ end
 if ARGV.size == 0
     run_test
 elsif ARGV.size > 1
-    puts "Error, too many arguments passed to program"
+    puts "Usage: ruby main.rb <input file>"
 else
 
     func_list = parse_input(ARGV[0])
